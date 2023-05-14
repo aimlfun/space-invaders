@@ -35,15 +35,15 @@ Any problems? Post a comment on my blog, and I will happily try to assist.
 - SpaceInvadersCore, the game itself used by both AI & UI versions.
 - SpaceInvaderCommentDecoration, used to create the large comments in Space Invader font!
 
-          █       
-         ███      
-         ███      
-     ███████████  
-    █████████████ 
-    █████████████ 
-    █████████████ 
-    █████████████ 
-    
+           █      
+          ███
+          ███  
+      ███████████ 
+     █████████████
+     █████████████
+     █████████████
+     █████████████
+
 ## PLEASE NOTE:
 
 Space Invaders^TM^, the arcade game was created by Japanese engineer and game designer **Tomohiro Nishikado** (https://en.wikipedia.org/wiki/Tomohiro_Nishikado) in 1978; and produced by Japanese electronic game manufacturer **Taito Corporation**. 
