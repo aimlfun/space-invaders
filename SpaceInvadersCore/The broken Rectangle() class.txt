@@ -1,0 +1,166 @@
+﻿
+████    ████     ███    █   █   █████   █   █           ████    █████    ███    █████     █     █   █    ████   █       █████
+█   █   █   █   █   █   █  █    █       █   █           █   █   █       █   █     █      █ █    █   █   █       █       █
+█   █   █   █   █   █   █ █     █       ██  █           █   █   █       █         █     █   █   ██  █   █       █       █
+████    ████    █   █   ██      ████    █ █ █           ████    ████    █         █     █   █   █ █ █   █       █       ████
+█   █   █ █     █   █   █ █     █       █  ██           █ █     █       █         █     █████   █  ██   █  ██   █       █
+█   █   █  █    █   █   █  █    █       █   █           █  █    █       █   █     █     █   █   █   █   █   █   █       █
+████    █   █    ███    █   █   █████   █   █           █   █   █████    ███      █     █   █   █   █    ████   █████   █████
+
+This burnt me, so I am documenting it. Rectangle() .Right and .Bottom are calculated wrongly.
+
+Let's Test the rectangle class, to prove how "width" and "height" apply:
+
+Rectangle r = new(10, 10, 1, 3);
+            
+Debug.WriteLine($"{r.Width}x{r.Height}"); 
+=> 1 x 3
+
+Debug.WriteLine($"x: {r.Left}..{r.Right} and y: {r.Top}..{r.Bottom}");
+=> x: 10..11 and y: 10..13
+
+That would suggest 
+    10,10 and 
+    11,10 and 
+    10,11 and 
+    11,11 and 
+    10,12 and 
+    11,12 and 
+    10,13 and 
+    11,13 
+are all in the rectangle, does it not?
+
+Nope. Not according to Microsoft's code.
+
+Run this:
+for (int y=10;y<15;y++)
+{
+    for(int x=10;x<15;x++)
+    {
+        if (r.Contains(x, y))
+        {
+            Debug.WriteLine($"({x},{y}) is in the rectangle");
+        }
+        else
+        {
+            Debug.WriteLine($"({x},{y}) is NOT in the rectangle");
+        }
+    }
+}
+
+Output:
+    (10,10) is in the rectangle
+    (11,10) is NOT in the rectangle <<< ???!!!!
+    (12,10) is NOT in the rectangle
+    (13,10) is NOT in the rectangle
+    (14,10) is NOT in the rectangle
+    (10,11) is in the rectangle
+    (11,11) is NOT in the rectangle <<< ???!!!!
+    (12,11) is NOT in the rectangle
+    (13,11) is NOT in the rectangle
+    (14,11) is NOT in the rectangle
+    (10,12) is in the rectangle
+    (11,12) is NOT in the rectangle <<< ???!!!!
+    (12,12) is NOT in the rectangle
+    (13,12) is NOT in the rectangle
+    (14,12) is NOT in the rectangle
+    (10,13) is NOT in the rectangle <<< ???!!!!
+    (11,13) is NOT in the rectangle <<< ???!!!!
+    (12,13) is NOT in the rectangle
+    (13,13) is NOT in the rectangle
+    (14,13) is NOT in the rectangle
+    (10,14) is NOT in the rectangle
+    (11,14) is NOT in the rectangle
+    (12,14) is NOT in the rectangle
+    (13,14) is NOT in the rectangle
+    (14,14) is NOT in the rectangle
+
+hmmm. that hurts my autistic brain
+
+
+Let's imagine a rectangle of 2x3. Rectangle r = new(0, 0, 2, 3);
+.Width=2, .Height = 3, gives us .Left: 0 .Right: 2 .Top: 0 .Bottom: 3 if we output those properties of "r"
+
+Remember Cartesian starts 0,0 bottom left which is lost on the Rectangle, and Windows Bitmaps.
+
+. +-+-+-+-+
+3 *****-+-+
+2 *****-+-+
+1 *****-+-+
+0 *****-+-+
+  0 1 2 . . 
+
+Debug.WriteLine(r.Contains(2, 3)); shows as "!" => result: False!!!!! Yet r.Contains(0, 0) => True. GitHub Copilot suggested adding "WTF?", which to be honest is what I was thinking.
+
+. +-+-+-+-+
+3 ****!-+-+
+2 *****-+-+
+1 *****-+-+
+0 *****-+-+
+  0 1 2 . . 
+
+But you're probably shouting "but 2,3 is OUTSIDE the rectangle, so it's correct!" I asked for "Right" and "Bottom" of 2 and 3.
+
+Let's redraw
+
+. +-+-+-+-+
+3 +-+-+-+-+
+2 *-*-+-+-+
+1 *-*-+-+-+
+0 *-*-+-+-+
+  0 1 2 . . 
+
+I now have 3 elements by 2. You're now shouting "but it's not discrete values but a range". Ok
+
+Redrawn.
+. +-+-+-+-+
+3 +-+-+-+-+
+2 ****+-+-+
+1 ****+-+-+
+0 ****+-+-+
+  0 1 2 . . 
+
+Fine, now we include 0,0.1,0.5, 1.0, 1.5, 1.99999 but not 2. Ok. But the width is now 1.9999999^ recurring, not 2.
+
+>>> BRAIN HURTS <<<
+
+From Microsoft's code:
+    /// <summary>
+    /// Determines if the specified point is contained within the rectangular region defined by this
+    /// <see cref='System.Drawing.Rectangle'/> .
+    /// </summary>
+    public readonly bool Contains(int x, int y) => X <= x && x < X + Width && Y <= y && y < Y + Height;
+
+They did NOT put <= on the upper bounds. So the RIGHT, BOTTOM, etc are NOT in the rectangle!!!! Doh.
+
+I think their code is wrong. i.e. should be Right = Left + Width -1, and Bottom = Top + Height -1
+
+    /// <summary>
+    /// Gets the x-coordinate of the lower-right corner of the rectangular region defined by this
+    /// <see cref='System.Drawing.Rectangle'/>.
+    /// </summary>
+    [Browsable(false)]
+    public readonly int Right => unchecked(X + Width);
+
+    /// <summary>
+    /// Gets the y-coordinate of the lower-right corner of the rectangular region defined by this
+    /// <see cref='System.Drawing.Rectangle'/>.
+    /// </summary>
+    [Browsable(false)]
+    public readonly int Bottom => unchecked(Y + Height);
+
+If Right/Bottom is not wrong, then Contains() is wrong. Because by declaring Right as "X"+"Width", any point suggest that is X+Width is in the rectangle.
+
+If Microsoft fixed this, it will no doubt break lots of apps using Rectangle, so I am not even going to log a ticket. But it's still dumb. 
+
+Documentation  https://learn.microsoft.com/en-us/dotnet/api/system.drawing.rectangle?view=net-8.0 says
+    Right	Gets the x-coordinate that is the sum of X and Width property values of this Rectangle structure.
+
+    ...No argument, it does return exactly that. Whether it should or not is another matter...
+
+And for contains it says "This method returns true if the point defined by x and y is contained within this Rectangle structure; otherwise false.", which is up for debate.
+    https://learn.microsoft.com/en-us/dotnet/api/system.drawing.rectangle.contains?view=net-8.0#system-drawing-rectangle-contains(system-int32-system-int32)
+
+    It doesn't say "This method returns true if the point defined by x and y is contained within this Rectangle structure, but not on the right or bottom edge; otherwise false.".
+
+I wasted a short while on this, not realising the "quirks in intended behaviour".

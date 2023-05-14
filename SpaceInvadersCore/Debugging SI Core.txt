@@ -1,0 +1,30 @@
+﻿
+████    █████   ████    █   █    ████    ████    ███    █   █    ████
+█   █   █       █   █   █   █   █       █         █     █   █   █
+█   █   █       █   █   █   █   █       █         █     ██  █   █
+█   █   ████    ████    █   █   █       █         █     █ █ █   █
+█   █   █       █   █   █   █   █  ██   █  ██     █     █  ██   █  ██
+█   █   █       █   █   █   █   █   █   █   █     █     █   █   █   █
+████    █████   ████     ███     ████    ████    ███    █   █    ████
+
+One of the most useful ways to see what's happening is to record the frame-by-frame action.
+
+In VideoDisplay.cs, set c_debugDrawEveryFrameAsAnImage = True and it will save a PNG file for every frame of the simulation. The files are saved in the folder defined by c_debuggingFileName.
+
+It will slow the game down depending on writing to an SSD or not. Given one frame every 8ms, it's writing a lot of PNGs.
+
+WARNING: BE SURE TO TURN IT OFF AFTER DEBUGGING.
+
+The next most useful thing is the "HitBox()" that is used to determine whether something collided. Each object has a different sized hit box.
+
+If you look at my broken Rectangle() class explanation, you'll be pleased to know that the rectangle drawn for a hitbox is the correct - anything inside the blue box is considered to be a collision.
+To do this, our hit boxes are 1px wider/taller, and the drawing of it is not.
+
+Hitboxes are drawn in blue. That's for a good reason - don't change the colour. There are 3 colours in play ignoring black - white, red, green. Intentionally collision detection ignores the blue channel. 
+That allows it to add decoration for debug without changing the game play.
+
+To turn hitbox debugging on, look in Saucer.cs, SpaceInvader.cs, SpaceInvaderBulletBase.cs and PlayerShip.cs. They all have a line that says "c_showHitBox = true;" - change it to false to turn it off.
+
+Lastly we have an option in Video.cs to draw a box around the sprites. "c_drawBoxesAroundSprites = true;" - change it to false to turn it off. Its sometimes useful to see the full area sprites occupy.
+
+For debugging what the AI sees (56x64px), there is a c_debugOverlayWhatAISees in AIPlayer.cs. Set it to true, and it will overlay red pixels on to the screen.

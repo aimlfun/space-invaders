@@ -1,0 +1,90 @@
+﻿<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="label36.Text" xml:space="preserve">
+    <value>The more accurate at shooting aliens the better. One wants to avoid wasting shots, esp. as the aliens get lower. But firing one shot only and killing one doesn't make for a high scoring AI. Therefore use this as an additional way to pick between AIs.</value>
+  </data>
+  <data name="label29.Text" xml:space="preserve">
+    <value>Encouraging it to select the best AI player is important. The tricky part is determining what really matters. Ultimately the game is about the score. But scoring a point that gets you killed isn't a good style. Also whilst shooting saucers will get you more points, avoiding death and getting to the next level is invariably better for overall score.</value>
+  </data>
+  <data name="label35.Text" xml:space="preserve">
+    <value>Each scored point is multiplied by this value. Ultimately the AI goal is to complete as many levels as possible (until it completes all). One level of invaders brings 990 points but with saucers, you can get even more. It is not as good an indicator as hit invader count.</value>
+  </data>
+  <data name="label74.Text" xml:space="preserve">
+    <value>Mutation is applied to offspring. Sometimes that offspring will function even better than the parents it is created off. But having some mutated provides more diversity, and hopefully more chance of coming up with a better brain.</value>
+  </data>
+  <metadata name="toolTip1.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+    <value>17, 17</value>
+  </metadata>
+  <data name="label76.Text" xml:space="preserve">
+    <value>An "Activation Function" decides whether a neuron should be activated or not. This means that it will decide whether the neuron’s input to the network is important or not in the process of prediction using simpler mathematical operations.  It also is useful for ensuring that the values don't explode to infinity, for example TanH keeps it between +/-1.</value>
+  </data>
+  <data name="label77.Text" xml:space="preserve">
+    <value>Mutation Functions are the operations that change the behaviour. For example increasing or decreasing the bias makes the neuron reach the threshold or not. Changing the activation function makes it behave differently.</value>
+  </data>
+  <data name="label70.Text" xml:space="preserve">
+    <value>Warning: The "reload" frequency (time between firing) is derived based off the score. If you train for a level it will be based off a score of 0. Then when you chain them, bullets are fired at the wrong timing, and it doesn't do very well! (for it to work you'd need to plug in the prior level score). Make sure in "AI Settings" you set the start score accordingly before training for that level.</value>
+  </data>
+  <metadata name="toolTip1.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+    <value>17, 17</value>
+  </metadata>
+  <metadata name="$this.TrayHeight" type="System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
+    <value>25</value>
+  </metadata>
+</root>

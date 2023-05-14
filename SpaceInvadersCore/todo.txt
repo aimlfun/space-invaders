@@ -1,0 +1,15 @@
+﻿█████    ███    ████     ███            █        ███     ███    █████
+  █     █   █   █   █   █   █           █         █     █   █     █
+  █     █   █   █   █   █   █           █         █     █         █
+  █     █   █   █   █   █   █           █         █      ███      █
+  █     █   █   █   █   █   █           █         █         █     █
+  █     █   █   █   █   █   █           █         █     █   █     █
+  █      ███    ████     ███            █████    ███     ███      █
+
+(everything done)
+
+NOT DOING (NO AI GAMEPLAY IMPACT)
+* bullet explode at the top of the screen. (Sprites are present for it, but not used.)
+* saucer explode. (Sprites are present for it, but not used.)
+* player explode. (Sprites are present for it, but not used.)
+* the "attract" screens before game start. (Sprites are present for it, but not used.)
