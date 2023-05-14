@@ -35,14 +35,6 @@ Any problems? Post a comment on my blog, and I will happily try to assist.
 - SpaceInvadersCore, the game itself used by both AI & UI versions.
 - SpaceInvaderCommentDecoration, used to create the large comments in Space Invader font!
 
-           █      
-          ███
-          ███  
-      ███████████ 
-     █████████████
-     █████████████
-     █████████████
-     █████████████
 
 ## PLEASE NOTE:
 
