@@ -44,5 +44,5 @@ The current owner of the copyright and trademark is with "Square Enix" (see http
 
 **Please be respectful of their ownership and rights.**
 
-I have intentionally solely built the core parts for training AI (and testing as a user), but have not copied the game in its entirety - it doesn't have any attract screens etc. 
-If you want to play the original (running their Zilog 8080 code), please look for it on MAME. It was made available. Where one stands legally doing so, one will need to check with Square Enix.
+I have intentionally built the core parts for training AI (and testing as a user), but have not copied the game in its entirety - it doesn't have any attract screens etc. 
+If you want to play the original (running their Intel 8080 code), please look for it on MAME. It was made available. Where one stands legally doing so, one will need to check with Square Enix.
