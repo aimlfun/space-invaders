@@ -38,7 +38,7 @@ Any problems? Post a comment on my blog, and I will happily try to assist.
 
 ## PLEASE NOTE:
 
-Space Invaders^TM^, the arcade game was created by Japanese engineer and game designer **Tomohiro Nishikado** (https://en.wikipedia.org/wiki/Tomohiro_Nishikado) in 1978; and produced by Japanese electronic game manufacturer **Taito Corporation**. 
+Space Invaders<sup>TM</sup>, the arcade game was created by Japanese engineer and game designer **Tomohiro Nishikado** (https://en.wikipedia.org/wiki/Tomohiro_Nishikado) in 1978; and produced by Japanese electronic game manufacturer **Taito Corporation**. 
 
 The current owner of the copyright and trademark is with "Square Enix" (see https://en.wikipedia.org/wiki/Square_Enix) who acquired Taito Corp, their website is https://spaceinvaders.square-enix-games.com/
 
