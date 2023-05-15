@@ -87,13 +87,13 @@ internal class SpaceInvaderController
     /// i.e the each frame this reference changes. It's a strange approach, but to be fair making them all 
     /// move in the way they do without has some headaches avoided by doing this.
     /// </summary>
-    internal Point referenceAlien = new(23, (SpaceInvader.Dimensions.Height + 9) * 4 - 2);
+    internal Point referenceAlien = new(23, (SpaceInvader.Dimensions.Height + 8) * 4 +4 );
 
     /// <summary>
     /// When aliens move, the reference alien is used to determine where the other aliens are drawn. When it comes 
     /// to erasing the aliens, the location they were drawn differs from the reference alien. So we preserve it in this variable.
     /// </summary>
-    internal Point lastReferenceAlien = new(23, (SpaceInvader.Dimensions.Height + 9) * 4 - 2);
+    internal Point lastReferenceAlien = new(23, (SpaceInvader.Dimensions.Height + 8) * 4 + 4);
 
     /// <summary>
     /// This is the next Space Invader to be rippled (moved).
@@ -339,13 +339,12 @@ internal class SpaceInvaderController
         // This suggests at the start, the "y" of the reference alien is 0x78, which is 120 in decimal.
 
         // The screen is inverted, so actually y = 256 - 120 = 136.
-        // If each alien is 8px high, and spaced with +9 in between (17px, as is born out from comparing YouTube real footage to mine), then
-        // our bottom position from which we subtract (0,17,34...) is calculated as 17x4+56 = 124 (top of sprite), not 136.
-
-        // remember drawing is based off the reference alien, so the offset is bottom reference not top tow
+        // If each alien is 8px high, and spaced with +8 in between (16px, as is born out from comparing YouTube real footage to mine), then
+        // our bottom position from which we subtract (0,16,32...) is calculated as 16x4+54 = 128 (top of sprite), not 136.
+        // But they are 8 tall and drawn inverted. So 136-8 = 128. I believe is correct.
         // "23" comes from comparing the original video footage to my own and adjusting mine until they overlay precisely. I find this
         // confusing as the original has "56" which is (a) double (b) far to right.
-        referenceAlien = new(23, (SpaceInvader.Dimensions.Height + 9) * 4 + offsetY + 56);
+        referenceAlien = new(23, (SpaceInvader.Dimensions.Height + 8) * 4 + offsetY + 64);
         lastReferenceAlien = new(referenceAlien.X, referenceAlien.Y);
 
         // wrap around to item 0 occurs, when we next attempt to find one.
@@ -621,18 +620,26 @@ internal class SpaceInvaderController
 
         Dictionary<int, int> spaceInvaderIndexedByColumn = new();
 
+        HashSet<int> columnsWithInvaders = new();
+
         // read all the invaders and stack into columns, top down.
 
         for (int i = 0; i < 55; i++)
         {
             if (InvadersAliveState[i] == SpaceInvader.InvaderState.alive)
             {
-                SpaceInvader.GetPosition(referenceAlien, i, out _, out int col, out int _, out _);
+                SpaceInvader.GetPosition(referenceAlien, i, out _, out int col, out int _, out int Y);
 
-                if (!spaceInvaderIndexedByColumn.ContainsKey(col + 1))
+                if (columnsWithInvaders.Contains(col + 1)) continue; // if we already found an invader in this column, skip this one
+                                
+                columnsWithInvaders.Add(col + 1); // record we found an invader in this column
+
+                // the row before ground is a no fire row. -7 is the top pos of player ship relative to the line.
+                if (Y > OriginalDataFrom1978.c_yOfBaseLineAboveWhichThePlayerShipIsDrawnPX - 7 /*<- top of player */ - SpaceInvader.Dimensions.Height - 1)
                 {
-                    spaceInvaderIndexedByColumn.Add(col + 1, i);
+                    continue;
                 }
+                spaceInvaderIndexedByColumn.Add(col + 1, i);
             }
         }
 
@@ -744,7 +751,7 @@ internal class SpaceInvaderController
     /// At the end of the round there is only one alien left - it moves 2 pixels left or 3 pixels right about 60 times a second.
     /// </summary>
     internal void Move()
-    {
+    {       
         // when an alien dies, we pause briefly. Initially I had one variable to track. But it is possible to kill multiple before the timer has elapse.
         // so we keep them in an array, removing them when their timer has elapsed.
         if (deadAliens.Count > 0)

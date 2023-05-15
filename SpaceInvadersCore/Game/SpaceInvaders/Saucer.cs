@@ -71,7 +71,7 @@ internal class Saucer
 
         // The flying saucer's direction is linked to the player's shot count.The lowest bit of the count determines which side of the screen the saucer comes from.
         // If the saucer appears after an even number of player shots then it comes from the right.After an odd number it comes from the left.
-        if (playerShots % 1 == 1)
+        if (playerShots % 2 == 1)
         {
             XDirection = 2;
             X = 0; // start mostly offscreen.
@@ -171,6 +171,9 @@ internal class Saucer
     /// <returns></returns>
     internal bool BulletHit(Point bulletLocation)
     {
-        return HitBox().Contains(bulletLocation);
+        Rectangle hitbox = HitBox();
+        return hitbox.Contains(new Point(bulletLocation.X, bulletLocation.Y)) ||
+                    hitbox.Contains(new Point(bulletLocation.X, bulletLocation.Y + 2)) ||
+                    hitbox.Contains(new Point(bulletLocation.X, bulletLocation.Y + 5));
     }
 }

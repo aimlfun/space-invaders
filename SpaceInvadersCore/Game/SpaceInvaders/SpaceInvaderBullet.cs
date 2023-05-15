@@ -136,7 +136,7 @@ namespace SpaceInvadersCore.Game.SpaceInvaders
 
             // But when there are 8 or fewer aliens on the screen the delta changes up
             // to 5 pixels per step (5*60/3 = 100 pixels per second).
-            Position.Y += SpaceInvadersRemaining < 8 ? 4 : 5;
+            Position.Y += SpaceInvadersRemaining < 8 ? 5 : 4;
 
             ++Steps;
         }
