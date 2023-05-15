@@ -466,7 +466,7 @@ public class GameController
         videoScreen.DrawGreenHorizontalBaseLine(OriginalDataFrom1978.s_playerColour, OriginalDataFrom1978.c_greenLineIndicatingFloorPX);
 
         // whilst the score changes throughout the game, the labels for them do not.
-        videoScreen.DrawString("SCORE<1> HI-SCORE SCORE<2>", new Point(8, 0));
+        videoScreen.DrawString("SCORE<1> HI-SCORE SCORE<2>", new Point(8, 8));
     }
 
     /// <summary>
@@ -523,10 +523,10 @@ public class GameController
             █████           ██████          
         */
 
-        int topYofShields = OriginalDataFrom1978.c_greenLineIndicatingFloorPX - 50;
+        int topYofShields = OriginalDataFrom1978.c_greenLineIndicatingFloorPX - 48;
 
         // They are positioned as follows:
-        //  |                                                          |____ <-- 50px above the green line.
+        //  |                                                          |____ <-- 56px above the green line.
         //  |     ##             ##              ##             ##     | 
         //  |    ####           ####            ####           ####    | 
         //  |    #  #           #  #            #  #           #  #    | 
@@ -895,5 +895,87 @@ public class GameController
     {
         return videoScreen.VideoShrunkForAI();
     }
+
+    /// <summary>
+    /// A radar array is a 1D array of 50 values, each value is the distance to the nearest object in that direction.
+    /// </summary>
+    /// <returns></returns>
+    public double[] AIGetRadarArray()
+    {
+        int samplePoints = 50;
+
+        double[] LIDAROutput = new double[samplePoints];
+
+        float LIDARAngleToCheckInDegrees = -60; 
+
+        float LIDARVisionAngleInDegrees = 2*(-LIDARAngleToCheckInDegrees)/samplePoints;
+
+        int searchDistanceInPixels = 200;
+
+        for (int LIDARAngleIndex = 0; LIDARAngleIndex < samplePoints; LIDARAngleIndex++)
+        {
+            //     -45  0  45
+            //  -90 _ \ | / _ 90   <-- relative to direction of player. 0 = right, 90 = up, so we adjust for
+            double LIDARAngleToCheckInRadians = DegreesInRadians(90 + LIDARAngleToCheckInDegrees);
+
+            // calculate ONCE per angle, not per radius.
+            double cos = Math.Cos(LIDARAngleToCheckInRadians);
+            double sin = Math.Sin(LIDARAngleToCheckInRadians);
+
+            float distanceToAlien = 0;
+
+            for (int currentLIDARScanningDistanceRadius = 5;
+                     currentLIDARScanningDistanceRadius < searchDistanceInPixels;
+                     currentLIDARScanningDistanceRadius += 4) // no need to check at 1 pixel resolution
+            {
+                double positionBeingScannedX = Math.Round(cos * currentLIDARScanningDistanceRadius);
+                double positionBeingScannedY = Math.Round(sin * currentLIDARScanningDistanceRadius);
+
+                // y has to be negated because the screen is upside down. Cartesian (0,) is bottom left, our back-buffer is Bitmap aligned (0,0) is top left.
+                Point p = new(playerShip.Position.X - (int)positionBeingScannedX, playerShip.Position.Y - (int)positionBeingScannedY);
+
+                if (p.X < 0 || p.X > 224 || p.Y < 32) break; // off screen
+
+                // do we see grass on that pixel?
+                if (videoScreen.GetPixel(p).G == 255)
+                {
+                    distanceToAlien = currentLIDARScanningDistanceRadius;
+                    break; // we've found the closest pixel in this direction
+                }
+
+                // DEBUG: enable this to see the radar rays
+                // videoScreen.SetPixel(Color.Blue, p);
+            }
+
+            if (distanceToAlien > 0)
+            {
+                distanceToAlien  /= searchDistanceInPixels;
+                
+                LIDAROutput[LIDARAngleIndex] = 1 - distanceToAlien;
+            }
+            else
+            {
+                LIDAROutput[LIDARAngleIndex] = 0;
+            }
+
+            LIDARAngleToCheckInDegrees += LIDARVisionAngleInDegrees;
+        }
+
+        // an array of float values 0..1 indicating "1" something is really close in that direction to "0" nothing.
+        return LIDAROutput;
+    }
+
+    /// <summary>
+    /// Logic requires radians but we track angles in degrees, this converts.
+    /// </summary>
+    /// <param name="angle"></param>
+    /// <returns></returns>
+    public static double DegreesInRadians(double angle)
+    {
+        // if (angle < 0 || angle > 360) Debugger.Break();
+
+        return (double)Math.PI * angle / 180;
+    }
+
     #endregion
 }
