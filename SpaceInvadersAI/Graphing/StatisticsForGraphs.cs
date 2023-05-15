@@ -58,7 +58,7 @@ namespace SpaceInvadersAI.Graphing
         internal int ShieldsShot = 0;
 
         /// <summary>
-        /// How many AI shots missed everything.
+        /// How many AI shots missed saucers and invaders.
         /// </summary>
         internal int Missed = 0;
 
@@ -102,7 +102,7 @@ namespace SpaceInvadersAI.Graphing
             GameFrames = bestBrain.AIPlayer.gameController.FramesPlayed;
 
             // if it didn't kill anything or destroy the shields then I guess it missed...
-            Missed = Shots - (InvadersKilled + SaucersKilled + ShieldsShot);
+            Missed = Shots - (InvadersKilled + SaucersKilled);
 
             // this is impossible, but it happened once during testing - because I zeroed player shots at start of level
             // it meant that we compared a level total with overall game total. 
