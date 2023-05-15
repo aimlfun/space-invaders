@@ -280,10 +280,11 @@ public class VideoDisplay
     /// <returns></returns>
     private static Color ColourBasedOnFilm(int y)
     {
-        //  +----------------------------------------------------------+
-        //  | SCORE<1>               HIGH-SCORE               SCORE<2> |
+        //  +----------------------------------------------------------+ _ 8
+        //  | SCORE<1>               HIGH-SCORE               SCORE<2> | _ 16
+        //  |                                                         .| _ 24
         //  |   0010                    1000                           |
-        //  |..........................................................| } y=33
+        //  |..........................................................| } y=34
         //  |.<ooo>....................................................| } red transparent film 
         //  |..........................................................| } y=55
         //  | /o\ /o\ /o\ /o\ /o\ /o\ /o\ /o\ /o\ /o\ /o\              |
@@ -309,7 +310,7 @@ public class VideoDisplay
         //       |<----- green film -------->|   this is so the extra lives are drawn green
         //       16                          136
 
-        if (y > 24 && y < 56) return Color.FromArgb(255, 255, 25, 0); // magenta film.
+        if (y > 33 && y < 56) return Color.FromArgb(255, 255, 25, 0); // magenta film.
         if (y > OriginalDataFrom1978.c_greenLineIndicatingFloorPX - 60 && y < 242) return OriginalDataFrom1978.s_playerColour; // green film.
 
         return Color.White; // non coloured
@@ -725,5 +726,37 @@ public class VideoDisplay
 
         // an image 224x256 (the size of the screen) that is a semi-transparent film.
         return overlayOfSemiTransparentOverlayFilm;
+    }
+
+    /// <summary>
+    /// Draws a rectangle on the back buffer, in the specified colour.
+    /// </summary>
+    /// <param name="colour"></param>
+    /// <param name="rectangle"></param>
+    public void SetPixel(Color colour, Point point)
+    {
+        int index1 = point.X * c_bytesPerPixel + point.Y * c_offsetToMoveToNextRasterLine;
+
+        BackBuffer[index1 /*+ c_offsetBlueChannel*/] = colour.B;  // blue offset is always 0, so we don't need to include it +0.
+        BackBuffer[index1 + c_offsetGreenChannel] = colour.G;
+        BackBuffer[index1 + c_offsetRedChannel] = colour.R;
+        BackBuffer[index1 + c_offsetAlphaChannel] = colour.A;
+    }
+
+    /// <summary>
+    /// Get pixel from the back buffer.
+    /// </summary>
+    /// <param name="colour"></param>
+    /// <param name="rectangle"></param>
+    public Color GetPixel(Point point)
+    {
+        int offsetInBackBuffer = point.X * c_bytesPerPixel + point.Y * c_offsetToMoveToNextRasterLine;
+
+        Color colour = Color.FromArgb(
+                        BackBuffer[offsetInBackBuffer + c_offsetAlphaChannel],
+                        BackBuffer[offsetInBackBuffer + c_offsetRedChannel],
+                        BackBuffer[offsetInBackBuffer + c_offsetGreenChannel],
+                        BackBuffer[offsetInBackBuffer /*+ c_offsetBlueChannel*/]);
+        return colour;
     }
 }
