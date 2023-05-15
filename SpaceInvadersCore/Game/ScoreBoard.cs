@@ -28,22 +28,22 @@ namespace SpaceInvadersCore.Game
         /// <summary>
         /// This is the rectangle that will be used to draw the score.
         /// </summary>
-        private static Rectangle s_scoreRectangle = new(24, 16, 32, 8);
+        private static Rectangle s_scoreRectangle = new(24, 24, 32, 8);
 
         /// <summary>
         /// This is the rectangle that will be used to draw the high score.
         /// </summary>
-        private static Rectangle s_highScoreRectangle = new(88, 16, 32, 8);
+        private static Rectangle s_highScoreRectangle = new(88, 24, 32, 8);
 
         /// <summary>
         /// This is the location where the score will be drawn.
         /// </summary>
-        private static Point s_scoreLocation = new(24, 16);
+        private static Point s_scoreLocation = new(24, 24);
 
         /// <summary>
         /// This is the location where the high score will be drawn.
         /// </summary>
-        private static Point s_highScoreLocation = new(88, 16);
+        private static Point s_highScoreLocation = new(88, 24);
 
         /// <summary>
         /// The score the player currently has.
