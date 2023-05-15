@@ -100,6 +100,9 @@
             checkedListBoxAllowedMutations = new CheckedListBox();
             tabPageScoreMultipliers = new TabPage();
             panelScoreMultipliers = new Panel();
+            label52 = new Label();
+            numericUpDownGroundPunishment = new NumericUpDown();
+            label53 = new Label();
             label42 = new Label();
             label41 = new Label();
             label40 = new Label();
@@ -133,6 +136,7 @@
             label92 = new Label();
             numericUpDownStartingScore = new NumericUpDown();
             panel3 = new Panel();
+            radioButtonAISeesRadar = new RadioButton();
             radioButtonAIAccessInternalData = new RadioButton();
             radioButtonAISeesScreen = new RadioButton();
             panel4 = new Panel();
@@ -212,9 +216,6 @@
             label34 = new Label();
             radioButtonPerceptron = new RadioButton();
             toolTip1 = new ToolTip(components);
-            label52 = new Label();
-            numericUpDownGroundPunishment = new NumericUpDown();
-            label53 = new Label();
             panelAIConfigScrollable.SuspendLayout();
             tabConfiguration.SuspendLayout();
             tabPageMutation.SuspendLayout();
@@ -236,6 +237,7 @@
             tabPageAllowedMutations.SuspendLayout();
             tabPageScoreMultipliers.SuspendLayout();
             panelScoreMultipliers.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)numericUpDownGroundPunishment).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownLives).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownShieldsShot).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownKillsAvoided).BeginInit();
@@ -258,7 +260,6 @@
             panelPerceptron.SuspendLayout();
             panelPerceptronOrRandom.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)numericUpDownConcurrentGames).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)numericUpDownGroundPunishment).BeginInit();
             SuspendLayout();
             // 
             // label1
@@ -1058,6 +1059,36 @@
             panelScoreMultipliers.Size = new Size(928, 471);
             panelScoreMultipliers.TabIndex = 0;
             // 
+            // label52
+            // 
+            label52.Font = new Font("Segoe UI Variable Display", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            label52.Location = new Point(247, 425);
+            label52.Name = "label52";
+            label52.Size = new Size(670, 36);
+            label52.TabIndex = 87;
+            label52.Text = "If the aliens reach the ground, the number of lives is meaningless. This can be used to discourage that outcome by punishing it for doing so.";
+            // 
+            // numericUpDownGroundPunishment
+            // 
+            numericUpDownGroundPunishment.DecimalPlaces = 4;
+            numericUpDownGroundPunishment.Increment = new decimal(new int[] { 1, 0, 0, 131072 });
+            numericUpDownGroundPunishment.Location = new Point(142, 431);
+            numericUpDownGroundPunishment.Maximum = new decimal(new int[] { 1000000, 0, 0, 0 });
+            numericUpDownGroundPunishment.Name = "numericUpDownGroundPunishment";
+            numericUpDownGroundPunishment.Size = new Size(95, 23);
+            numericUpDownGroundPunishment.TabIndex = 85;
+            // 
+            // label53
+            // 
+            label53.Anchor = AnchorStyles.Right;
+            label53.AutoSize = true;
+            label53.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold, GraphicsUnit.Point);
+            label53.Location = new Point(17, 433);
+            label53.Name = "label53";
+            label53.Size = new Size(117, 15);
+            label53.TabIndex = 86;
+            label53.Text = "Ground punishment:";
+            // 
             // label42
             // 
             label42.Font = new Font("Segoe UI Variable Display", 9F, FontStyle.Regular, GraphicsUnit.Point);
@@ -1403,12 +1434,23 @@
             // 
             // panel3
             // 
+            panel3.Controls.Add(radioButtonAISeesRadar);
             panel3.Controls.Add(radioButtonAIAccessInternalData);
             panel3.Controls.Add(radioButtonAISeesScreen);
             panel3.Location = new Point(91, 42);
             panel3.Name = "panel3";
-            panel3.Size = new Size(200, 25);
+            panel3.Size = new Size(302, 25);
             panel3.TabIndex = 114;
+            // 
+            // radioButtonAISeesRadar
+            // 
+            radioButtonAISeesRadar.AutoSize = true;
+            radioButtonAISeesRadar.Location = new Point(189, 3);
+            radioButtonAISeesRadar.Name = "radioButtonAISeesRadar";
+            radioButtonAISeesRadar.Size = new Size(55, 19);
+            radioButtonAISeesRadar.TabIndex = 36;
+            radioButtonAISeesRadar.Text = "Radar";
+            radioButtonAISeesRadar.UseVisualStyleBackColor = true;
             // 
             // radioButtonAIAccessInternalData
             // 
@@ -2185,36 +2227,6 @@
             radioButtonPerceptron.UseVisualStyleBackColor = true;
             radioButtonPerceptron.CheckedChanged += RadioButtonPerceptron_CheckedChanged;
             // 
-            // label52
-            // 
-            label52.Font = new Font("Segoe UI Variable Display", 9F, FontStyle.Regular, GraphicsUnit.Point);
-            label52.Location = new Point(247, 425);
-            label52.Name = "label52";
-            label52.Size = new Size(670, 36);
-            label52.TabIndex = 87;
-            label52.Text = "If the aliens reach the ground, the number of lives is meaningless. This can be used to discourage that outcome by punishing it for doing so.";
-            // 
-            // numericUpDownGroundPunishment
-            // 
-            numericUpDownGroundPunishment.DecimalPlaces = 4;
-            numericUpDownGroundPunishment.Increment = new decimal(new int[] { 1, 0, 0, 131072 });
-            numericUpDownGroundPunishment.Location = new Point(142, 431);
-            numericUpDownGroundPunishment.Maximum = new decimal(new int[] { 1000000, 0, 0, 0 });
-            numericUpDownGroundPunishment.Name = "numericUpDownGroundPunishment";
-            numericUpDownGroundPunishment.Size = new Size(95, 23);
-            numericUpDownGroundPunishment.TabIndex = 85;
-            // 
-            // label53
-            // 
-            label53.Anchor = AnchorStyles.Right;
-            label53.AutoSize = true;
-            label53.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold, GraphicsUnit.Point);
-            label53.Location = new Point(17, 433);
-            label53.Name = "label53";
-            label53.Size = new Size(117, 15);
-            label53.TabIndex = 86;
-            label53.Text = "Ground punishment:";
-            // 
             // FormAIConfig
             // 
             AcceptButton = buttonLearn;
@@ -2261,6 +2273,7 @@
             tabPageScoreMultipliers.ResumeLayout(false);
             panelScoreMultipliers.ResumeLayout(false);
             panelScoreMultipliers.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)numericUpDownGroundPunishment).EndInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownLives).EndInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownShieldsShot).EndInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownKillsAvoided).EndInit();
@@ -2290,7 +2303,6 @@
             panelPerceptronOrRandom.ResumeLayout(false);
             panelPerceptronOrRandom.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)numericUpDownConcurrentGames).EndInit();
-            ((System.ComponentModel.ISupportInitialize)numericUpDownGroundPunishment).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -2481,5 +2493,6 @@
         private Label label95;
         private Label label94;
         private NumericUpDown numericUpDownGroundPunishment;
+        private RadioButton radioButtonAISeesRadar;
     }
 }

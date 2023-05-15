@@ -36,6 +36,13 @@ internal class PersistentConfig
     public enum FrameworkMode { learning, playing };
 
     /// <summary>
+    /// videoScreen means the AI is looking at the screen, and trying to figure out what to do.
+    /// internalData means the AI has access to the internal data structures, and can make decisions based on that.
+    /// radar means the AI know distance from invaders, and cover by shields.
+    /// </summary>
+    public enum AIInputMode { videoScreen, internalData, radar };
+
+    /// <summary>
     /// Determines whether it is single AI player trying to beat the game, or multiple AIs competing to learn the game.
     /// </summary>
     public FrameworkMode Mode { get; set; } = FrameworkMode.learning;
@@ -175,9 +182,11 @@ internal class PersistentConfig
     public string? Template { get; set; } = null;
 
     /// <summary>
-    /// If false, it uses the screen. If true, it uses the internal data.
+    /// What the AI is using as the input.
     /// </summary>
-    public bool AIAccessInternalData { get; set; } = true;
+    public AIInputMode InputToAI { get; set; } = AIInputMode.internalData;
+
+    public int AIRadarSamplePoints { get; set; } = 30;
     #endregion
 
     /// <summary>

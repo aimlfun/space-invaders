@@ -7,6 +7,7 @@ using SpaceInvadersAI.AI;
 using System.Drawing.Imaging;
 using SpaceInvadersAI.AI.Utilities;
 using System.Drawing;
+using static SpaceInvadersAI.Learning.Configuration.PersistentConfig;
 
 namespace SpaceInvadersAI.Learning.AIPlayerAndController;
 
@@ -117,10 +118,10 @@ internal class AIPlayer : IDisposable
         brainControllingPlayerShip.AIPlayer = this;
 
         // if the AI is reading the screen, adding silly pixels that are unique to this brain will confuse it. Better not to have the annotations.
-        if (PersistentConfig.Settings.AIAccessInternalData)
+        if (PersistentConfig.Settings.InputToAI != AIInputMode.videoScreen)
         {
             // we write these to the screen once for performance reasons. Just to show off, we do so using our video display code not onto a Bitmap.
-            videoDisplay.DrawString(brain.Provenance.ToUpper().Replace("/", "-"), new Point(216 - 8 - brain.Provenance.Length * 8, 16)); // alphanumeric sprites are 8px wide
+            videoDisplay.DrawString(brain.Provenance.ToUpper().Replace("/", "-"), new Point(216 - 8 - brain.Provenance.Length * 8, 24)); // alphanumeric sprites are 8px wide
 
             // remove CREDIT 00 using fill, and replace with brain's name.
             videoDisplay.FillRectangle(Color.Black, new Rectangle(136, 244, 87, 11));
@@ -135,14 +136,23 @@ internal class AIPlayer : IDisposable
     {
         if (gameController.IsGameOver) return;
 
-        // 2 inputs supported - either internal data OR the screen (shrunk to 56x64).
-        if (PersistentConfig.Settings.AIAccessInternalData)
+        // 3 types of input supported 
+        switch(PersistentConfig.Settings.InputToAI)
         {
-            neuralNetworkInput = gameController.AIGetObjectArray().ToArray();
-        }
-        else
-        {
-            neuralNetworkInput = gameController.AIGetShrunkScreen();
+            case AIInputMode.videoScreen:
+                neuralNetworkInput = gameController.AIGetShrunkScreen(); // (shrunk to 56x64)
+                break;
+            
+            case AIInputMode.internalData:
+                neuralNetworkInput = gameController.AIGetObjectArray().ToArray();
+                break;
+            
+            case AIInputMode.radar:
+                neuralNetworkInput = gameController.AIGetRadarArray();
+                break;
+
+            default:
+                throw new NotImplementedException();
         }
 
         brainControllingPlayerShip.SetInputValues(neuralNetworkInput);
@@ -246,7 +256,7 @@ internal class AIPlayer : IDisposable
             Bitmap latestVideoDisplayContent = videoDisplay.GetVideoDisplayContent();
 
             // if we are debugging, and we want to see what the AI sees, then overlay the AI's input onto the screen.
-            if (!PersistentConfig.Settings.AIAccessInternalData)
+            if (PersistentConfig.Settings.InputToAI == AIInputMode.videoScreen)
             {
                 LabelVideoScreenWithNameAndProvenancePlusPixelOverlay(latestVideoDisplayContent);
             }

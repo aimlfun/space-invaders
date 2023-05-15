@@ -195,8 +195,18 @@ public partial class FormAIConfig : Form
         numericUpDownStartingScore.Value = (int)PersistentConfig.Settings.AIStartScore;
         radioButtonRandomNeurons.Checked = PersistentConfig.Settings.CreatingARandomNetwork;
 
-        radioButtonAIAccessInternalData.Checked = PersistentConfig.Settings.AIAccessInternalData;
-        radioButtonAISeesScreen.Checked = !PersistentConfig.Settings.AIAccessInternalData;
+        switch (PersistentConfig.Settings.InputToAI)
+        {
+            case PersistentConfig.AIInputMode.videoScreen:
+                radioButtonAISeesScreen.Checked = true;
+                break;
+            case PersistentConfig.AIInputMode.radar:
+                radioButtonAISeesRadar.Checked = true;
+                break;
+            case PersistentConfig.AIInputMode.internalData:
+                radioButtonAIAccessInternalData.Checked = true;
+                break;
+        }
 
         radioButtonPerceptron.Checked = !radioButtonRandomNeurons.Checked;
         radioButtonAIChoosesAction.Checked = PersistentConfig.Settings.UseActionFireApproach;
@@ -333,7 +343,20 @@ public partial class FormAIConfig : Form
         PersistentConfig.Settings.NumberOfTimesASingleBrainIsMutatedInOneGeneration = (int)numericUpDownMutationTimes.Value;
         PersistentConfig.Settings.PercentChanceABrainIsPickedForMutation = (int)numericUpDownPctChance.Value;
         PersistentConfig.Settings.PercentOfBrainsToCreateFromTemplate = (int)numericUpDownTemplated.Value;
-        PersistentConfig.Settings.AIAccessInternalData = radioButtonAIAccessInternalData.Checked;
+
+        if (radioButtonAIAccessInternalData.Checked)
+        {
+            PersistentConfig.Settings.InputToAI = PersistentConfig.AIInputMode.internalData;
+        }
+        else if (radioButtonAISeesScreen.Checked)
+        {
+            PersistentConfig.Settings.InputToAI = PersistentConfig.AIInputMode.videoScreen;
+        }
+        else
+        {
+            PersistentConfig.Settings.InputToAI = PersistentConfig.AIInputMode.radar;
+        }
+
         PersistentConfig.Settings.AIStartScore = (int)numericUpDownStartingScore.Value;
 
         PersistentConfig.Settings.AllowedActivationFunctions = GetSelectedActivationFunctions();
@@ -369,7 +392,7 @@ public partial class FormAIConfig : Form
         FitnessScoreMultipliers.Settings.ShieldsShotMultiplier = (float)numericUpDownShieldsShot.Value;
         FitnessScoreMultipliers.Settings.ScoreMultiplier = (float)numericUpDownScore.Value;
         FitnessScoreMultipliers.Settings.InvaderMultiplier = (float)numericUpDownHitInvader.Value;
-        FitnessScoreMultipliers.Settings.PunishmentForInvadersReachingBottom = (float) numericUpDownGroundPunishment.Value;
+        FitnessScoreMultipliers.Settings.PunishmentForInvadersReachingBottom = (float)numericUpDownGroundPunishment.Value;
 
         // retrieve the rules + template
         ComboBox[] levelComboBoxes = new[] { comboBoxLevelBrain1, comboBoxLevelBrain2, comboBoxLevelBrain3, comboBoxLevelBrain4, comboBoxLevelBrain5,

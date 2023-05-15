@@ -260,61 +260,70 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
         /// <param name="outputParameters"></param>
         private static void GetAIInputOutputs(out string[] inputParameters, out string[] outputParameters)
         {
-            if (PersistentConfig.Settings.AIAccessInternalData)
+            List<string> inputs;
+
+            switch (PersistentConfig.Settings.InputToAI)
             {
-                // labels for the input neurons
-                List<string> inputs = new()
-                {
-                    $"player-position-x",
+                case PersistentConfig.AIInputMode.internalData:
+                    inputs = new()
+                    {
+                        $"player-position-x",
+                        // AI is informed where the player bullet is. I am not convinced this helps.
+                        $"player-bullet-y",
+                        // AI is informed of the whereabout of any bullets (danger)
+                        $"alien-rolling-bullet-x",
+                        $"alien-rolling-bullet-y",
+                        $"alien-plunger-bullet-x",
+                        $"alien-plunger-bullet-y",
+                        $"alien-squiggly-bullet-x",
+                        $"alien-squiggly-bullet-y"
+                    };
 
-                    // AI is informed where the player bullet is. I am not convinced this helps.
-                    $"player-bullet-y",
+                    // indicator for each of alive or dead
+                    for (int alienIndex = 0; alienIndex < 55; alienIndex++)
+                    {
+                        inputs.Add($"alien-alive{alienIndex}");
+                    }
 
-                    // AI is informed of the whereabout of any bullets (danger)
-                    $"alien-rolling-bullet-x",
-                    $"alien-rolling-bullet-y",
+                    // everything is relative to this "reference" alien
+                    inputs.Add($"reference-alien-x");
+                    inputs.Add($"reference-alien-y");
 
-                    $"alien-plunger-bullet-x",
-                    $"alien-plunger-bullet-y",
+                    // AI is informed of the direction/speed the aliens are moving.
+                    inputs.Add($"alien-x-direction");
 
-                    $"alien-squiggly-bullet-x",
-                    $"alien-squiggly-bullet-y"
-                };
+                    // AI is informed of the location of the saucer, and direction (l2r or r2l)
+                    inputs.Add($"saucer-x-direction");
+                    inputs.Add($"saucer-x");
+                    inputs.Add($"is-under-shield");
+                    break;
+                    
+                case PersistentConfig.AIInputMode.videoScreen:
+                    // just a bunch of pixels. 3584 of them representing the screen.
+                    inputs = new();
 
-                // indicator for each of alive or dead
-                for (int alienIndex = 0; alienIndex < 55; alienIndex++)
-                {
-                    inputs.Add($"alien-alive{alienIndex}");
-                }
+                    // indicator for each of alive or dead
+                    for (int pixelIndex = 0; pixelIndex < 56 * 64; pixelIndex++)
+                    {
+                        inputs.Add($"{pixelIndex}");
+                    }
 
-                // everything is relative to this "reference" alien
-                inputs.Add($"reference-alien-x");
-                inputs.Add($"reference-alien-y");
+                    break;
 
-                // AI is informed of the direction/speed the aliens are moving.
-                inputs.Add($"alien-x-direction");
+                case PersistentConfig.AIInputMode.radar:
+                    inputs = new();
 
-                // AI is informed of the location of the saucer, and direction (l2r or r2l)
-                inputs.Add($"saucer-x-direction");
-                inputs.Add($"saucer-x");
-                inputs.Add($"is-under-shield");
+                    // distance indicator
+                    for (int radarIndex = 0; radarIndex < 50; radarIndex++)
+                    {
+                        inputs.Add($"radar-{radarIndex}");
+                    }
+                    break;
 
-                inputParameters = inputs.ToArray();
-
+                default: throw new Exception("Unknown AI input mode");
             }
-            else
-            {
-                // just a bunch of pixels. 3584 of them representing the screen.
-                List<string> inputs = new();
 
-                // indicator for each of alive or dead
-                for (int pixelIndex= 0; pixelIndex < 56* 64; pixelIndex++)
-                {
-                    inputs.Add($"{pixelIndex}");
-                }
-
-                inputParameters = inputs.ToArray();
-            }
+            inputParameters = inputs.ToArray();
 
             if (!PersistentConfig.Settings.UseActionFireApproach)
                 outputParameters = new string[] { "desired-position", "fire" }; // what we require "out" for controlling player

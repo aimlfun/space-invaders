@@ -37,7 +37,7 @@ internal static class FitnessScoring
                         + controller.NumberOfInvadersKilled * FitnessScoreMultipliers.Settings.InvaderMultiplier
                         + controller.NumberOfSaucersKilled * FitnessScoreMultipliers.Settings.SaucerMultiplier
                         + (controller.Level - 1) * FitnessScoreMultipliers.Settings.LevelMultiplier // the more levels completed the better. Hitting the saucer gets more points, but could end up killing you.
-                        + (controller.Shots == 0 ? 0 : FitnessScoreMultipliers.Settings.AccuracyMultiplier * (float)controller.NumberOfInvadersKilled / (float)controller.Shots) // but we need to encourage accuracy too 0..10
+                        + (controller.Shots == 0 ? 0 : FitnessScoreMultipliers.Settings.AccuracyMultiplier * ((float)controller.NumberOfInvadersKilled+ (float) controller.NumberOfSaucersKilled) / (float)controller.Shots) // but we need to encourage accuracy too 0..10
                         + controller.KillsAvoided * FitnessScoreMultipliers.Settings.KillsAvoidedMultiplier  // avoiding death is vital to high scores, so we reward it.
                         - controller.NumberOfTimesShieldsWereShotByPlayer * FitnessScoreMultipliers.Settings.ShieldsShotMultiplier // we don't want the player to shoot the shields. 
                         + controller.Lives * FitnessScoreMultipliers.Settings.LivesMultiplier - // how much is a life worth?        
@@ -50,7 +50,7 @@ internal static class FitnessScoring
             $"+ [invaders] {controller.NumberOfInvadersKilled} * {FitnessScoreMultipliers.Settings.InvaderMultiplier}\n" +
             $"+ [saucers] {controller.NumberOfSaucersKilled} * {FitnessScoreMultipliers.Settings.SaucerMultiplier}\n" +
             $"+ [level] ({controller.Level}-1) * {FitnessScoreMultipliers.Settings.LevelMultiplier}\n" +
-            $"+ [accuracy] {(controller.Shots == 0 ? 0 : FitnessScoreMultipliers.Settings.AccuracyMultiplier * (float)controller.NumberOfInvadersKilled / (float)controller.Shots)}" +
+            $"+ [accuracy] {(controller.Shots == 0 ? 0 : FitnessScoreMultipliers.Settings.AccuracyMultiplier * ((float)controller.NumberOfInvadersKilled + (float) controller.NumberOfSaucersKilled) / (float)controller.Shots)}" +
             $"+ [kills-avoided] {controller.KillsAvoided} * {FitnessScoreMultipliers.Settings.KillsAvoidedMultiplier}\n" +
             $"- [shields-hit] {controller.NumberOfTimesShieldsWereShotByPlayer} * {FitnessScoreMultipliers.Settings.ShieldsShotMultiplier}\n" +
             $"+ [lives] {controller.Lives} * {FitnessScoreMultipliers.Settings.LivesMultiplier} \n" +
