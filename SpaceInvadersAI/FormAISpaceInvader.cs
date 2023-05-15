@@ -280,8 +280,13 @@ namespace SpaceInvadersAI
                 .AddDataSet(playerShotsFired, Color.FromArgb(100, 0, 255, 0), "shots")
                 .AddDataSet(missed, Color.FromArgb(100, 255, 100, 160), "missed")
                 .AddDataSet(invadersKilled, Color.FromArgb(100, 255, 0, 0), "invaders")
-                .AddDataSet(saucersKilled, Color.FromArgb(100, 255, 255, 0), "saucers")
-                .AddDataSet(shields, Color.FromArgb(100, 160, 100, 10), "shields");
+                .AddDataSet(saucersKilled, Color.FromArgb(100, 255, 255, 0), "saucers");
+
+            // if not playing with shields, don't show the shields graph
+            if (PersistentConfig.Settings.AIPlaysWithShields)
+            {
+                shotsGraph.AddDataSet(shields, Color.FromArgb(100, 160, 100, 10), "shields");
+            }
             Bitmap graphOfShots = shotsGraph.Plot();
 
             // graph 3 - how many times the player was in the path of a bullet when it was fired, and avoided it
