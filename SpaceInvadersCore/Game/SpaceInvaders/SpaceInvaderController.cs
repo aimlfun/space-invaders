@@ -634,11 +634,12 @@ internal class SpaceInvaderController
                                 
                 columnsWithInvaders.Add(col + 1); // record we found an invader in this column
 
-                // the row before ground is a no fire row. -7 is the top pos of player ship relative to the line.
-                if (Y > OriginalDataFrom1978.c_yOfBaseLineAboveWhichThePlayerShipIsDrawnPX - 7 /*<- top of player */ - SpaceInvader.Dimensions.Height - 1)
+                // the row before ground is a no fire row.
+                if (Y > OriginalDataFrom1978.c_yOfBaseLineAboveWhichThePlayerShipIsDrawnPX - 16 /*<- top of player */ - SpaceInvader.Dimensions.Height )
                 {
                     continue;
                 }
+
                 spaceInvaderIndexedByColumn.Add(col + 1, i);
             }
         }

@@ -54,7 +54,9 @@ internal static class OriginalDataFrom1978
     internal const int c_playerBulletSpeedPX = 4;
 
     //  +----------------------------------------------------------+
+    //  |                                                          |
     //  | SCORE<1>               HIGH-SCORE               SCORE<2> |
+    //  |                                                          |
     //  |   0010                    1000                           |
     //  |                                                          | ___  c_topOfSaucerLinePX
     //  | <ooo>                                                    | ___  c_verticalPointWherePlayerBulletsStopPX
@@ -89,7 +91,7 @@ internal static class OriginalDataFrom1978
     /// <summary>
     /// This is the vertical top where the saucer starts.
     /// </summary>
-    internal const int c_topOfSaucerLinePX = 32;
+    internal const int c_topOfSaucerLinePX = 40;
 
     /// <summary>
     /// This is where the player is positioned vertically.

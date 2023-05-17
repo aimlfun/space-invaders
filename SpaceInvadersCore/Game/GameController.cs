@@ -936,8 +936,8 @@ public class GameController
 
                 if (p.X < 0 || p.X > 224 || p.Y < 32) break; // off screen
 
-                // do we see grass on that pixel?
-                if (videoScreen.GetPixel(p).G == 255)
+                // do we see invader / saucer on that pixel?
+                if (videoScreen.GetPixel(p).G == 255) // true of invader (white) or saucer (magenta) shields (green).
                 {
                     distanceToAlien = currentLIDARScanningDistanceRadius;
                     break; // we've found the closest pixel in this direction
@@ -964,7 +964,7 @@ public class GameController
         // an array of float values 0..1 indicating "1" something is really close in that direction to "0" nothing.
         return LIDAROutput;
     }
-
+   
     /// <summary>
     /// Logic requires radians but we track angles in degrees, this converts.
     /// </summary>
