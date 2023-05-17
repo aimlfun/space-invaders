@@ -86,13 +86,14 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
         /// </summary>
         /// <param name="level"></param>
         /// <returns></returns>
-        private static string GetTemplateFileNameForLevel(int level, out int startScore)
+        private static string GetTemplateFileNameForLevel(int level, int lastScore, out int startScore)
         {
             foreach (int i in PersistentConfig.Settings.BrainTemplates.Keys)
             {
                 RuleLevelBrain rule = PersistentConfig.Settings.BrainTemplates[i];
 
-                if (rule.LevelRule.Contains(level.ToString()))
+                // e.g. level 1
+                if (rule.LevelRule == level.ToString())
                 {
                     startScore = rule.StartingScore;
                     return rule.BrainTemplateFileName;
@@ -108,7 +109,7 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
 
                     if (level >= start && level <= end)
                     {
-                        startScore = rule.StartingScore;
+                        if (level == start) startScore = rule.StartingScore; else startScore = lastScore;
                         return rule.BrainTemplateFileName;
                     }
                 }
@@ -121,14 +122,14 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
                     {
                         if (part == level.ToString())
                         {
-                            startScore = rule.StartingScore;
+                            if (part == parts[0]) startScore = rule.StartingScore; else startScore = lastScore;
                             return rule.BrainTemplateFileName;
                         }
                     }
                 }
             }
 
-            startScore = 0;
+            startScore = lastScore;
 
             // last one is the default
             return PersistentConfig.Settings.BrainTemplates.Values.ToArray()[^1].BrainTemplateFileName;
@@ -141,7 +142,7 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
         /// <param name="level"></param>
         private static void LoadBrainConfiguredForLevel(int level)
         {
-            string levelFile = GetTemplateFileNameForLevel(level, out int startScore);
+            string levelFile = GetTemplateFileNameForLevel(level, s_player is null || s_player.gameController is null?0: s_player.brainControllingPlayerShip.AIPlayer.gameController.Score,  out int startScore);
             Debug.WriteLine($"level: {level} filename: {levelFile}");
 
             Brain brain = Brain.CreateFromTemplate(File.ReadAllText(levelFile));

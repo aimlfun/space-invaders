@@ -137,23 +137,13 @@ internal class AIPlayer : IDisposable
         if (gameController.IsGameOver) return;
 
         // 3 types of input supported 
-        switch(PersistentConfig.Settings.InputToAI)
+        neuralNetworkInput = PersistentConfig.Settings.InputToAI switch
         {
-            case AIInputMode.videoScreen:
-                neuralNetworkInput = gameController.AIGetShrunkScreen(); // (shrunk to 56x64)
-                break;
-            
-            case AIInputMode.internalData:
-                neuralNetworkInput = gameController.AIGetObjectArray().ToArray();
-                break;
-            
-            case AIInputMode.radar:
-                neuralNetworkInput = gameController.AIGetRadarArray();
-                break;
-
-            default:
-                throw new NotImplementedException();
-        }
+            AIInputMode.videoScreen => gameController.AIGetShrunkScreen(),// (shrunk to 56x64)
+            AIInputMode.internalData => gameController.AIGetObjectArray().ToArray(),
+            AIInputMode.radar => gameController.AIGetRadarArray(),
+            _ => throw new NotImplementedException(),
+        };
 
         brainControllingPlayerShip.SetInputValues(neuralNetworkInput);
 
@@ -202,7 +192,7 @@ internal class AIPlayer : IDisposable
 
     /// <summary>
     /// In this approach, the neural network is asked to decide what action to take.
-    /// It has 7 possible actions, ranging from moving left, to moving right, to firing.
+    /// It has 6 possible actions, ranging from moving left, to moving right, to firing.
     /// </summary>
     /// <param name="outputFromNeuralNetwork"></param>
     private void AIChoosesActionToControlPlayer(Dictionary<string, double> outputFromNeuralNetwork)

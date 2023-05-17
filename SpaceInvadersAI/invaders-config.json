@@ -1,0 +1,104 @@
+{
+  "Mode": 0,
+  "BrainTemplates": {
+    "0": {
+      "StartingScore": 0,
+      "LevelRule": "1-4",
+      "BrainTemplateFileName": ".\\Templates\\s=5110 lvl=5 ik=268 sk=3.tem"
+    },
+    "1": {
+      "StartingScore": 5110,
+      "LevelRule": "5-6",
+      "BrainTemplateFileName": ".\\Templates\\s=7960 lvl=7 ik=146 sk=2.tem"
+    },
+    "2": {
+      "StartingScore": 7960,
+      "LevelRule": "7-8",
+      "BrainTemplateFileName": ".\\Templates\\s=9770 lvl=8 ik=101 sk=0.tem"
+    },
+    "3": {
+      "StartingScore": 9770,
+      "LevelRule": "9-10",
+      "BrainTemplateFileName": ".\\Templates\\s=10010 lvl=9 ik=21 sk=0.tem"
+    },
+    "4": {
+      "StartingScore": 0,
+      "LevelRule": "",
+      "BrainTemplateFileName": ""
+    },
+    "5": {
+      "StartingScore": 0,
+      "LevelRule": "",
+      "BrainTemplateFileName": ""
+    },
+    "6": {
+      "StartingScore": 0,
+      "LevelRule": "",
+      "BrainTemplateFileName": ""
+    },
+    "7": {
+      "StartingScore": 0,
+      "LevelRule": "",
+      "BrainTemplateFileName": ""
+    },
+    "8": {
+      "StartingScore": 0,
+      "LevelRule": "",
+      "BrainTemplateFileName": ""
+    }
+  },
+  "UseActionFireApproach": false,
+  "AIHiddenLayers": [
+    0,
+    0,
+    0
+  ],
+  "MovesBeforeMutation": 100000,
+  "SelectionType": 2,
+  "CreatingARandomNetwork": true,
+  "ConcurrentGames": 200,
+  "DesiredRandomNeurons": 11,
+  "MinimumNumberOfNeurons": 3,
+  "MaximumNumberOfNeurons": 99,
+  "PercentOfBrainsToCreateAsNewRandomDuringMutation": 50,
+  "PercentOfBrainsToCreateFromTemplate": 5,
+  "PercentOfBrainsPreservedDuringMutation": 5,
+  "NumberOfTimesASingleBrainIsMutatedInOneGeneration": 2,
+  "PercentChanceABrainIsPickedForMutation": 50,
+  "PercentageOfDeadScoreThreshold": 0.9,
+  "AIPlaysWithShields": true,
+  "AIOneLevelOnly": false,
+  "AIStartLevel": 1,
+  "AIStartScore": 0,
+  "AllowedActivationFunctions": [
+    12,
+    16,
+    17,
+    18
+  ],
+  "AllowedMutationMethods": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11
+  ],
+  "CellTypeRatios": {
+    "PERCEPTRON": 100,
+    "AND": 25,
+    "TRANSISTOR": 25,
+    "IF": 25,
+    "MAX": 25,
+    "MIN": 25
+  },
+  "Template": ".\\Templates\\s=5110 lvl=5 ik=268 sk=3.tem",
+  "InputToAI": 2,
+  "AIRadarSamplePoints": 30
+}

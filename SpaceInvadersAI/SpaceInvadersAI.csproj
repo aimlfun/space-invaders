@@ -18,4 +18,25 @@
     <Folder Include="Templates\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="invaders-config.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="space-invaders-fitness-scoring.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Templates\s=10010 lvl=9 ik=21 sk=0.tem">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Templates\s=5110 lvl=5 ik=268 sk=3.tem">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Templates\s=7960 lvl=7 ik=146 sk=2.tem">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Templates\s=9770 lvl=8 ik=101 sk=0.tem">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

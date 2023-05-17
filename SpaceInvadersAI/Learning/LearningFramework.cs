@@ -622,10 +622,14 @@ internal class LearningFramework
     private void CalculateScoringOfAIPlayers()
     {
         SortNetworkByFitnessAssigningItToScore(); // largest "Score" (best performing) goes to the top
-        
+
         // 500 is the rough number for the graph to look good. If you have a lot of generations,
-        // it will be slow to draw and eat memory for no good reason. So we remove half of the stats.
-        if (performanceOfBestPlayerPerGeneration.Count > 1000) RemoveEveryOtherPerformanceStat();
+        // it will be slow to draw and eat memory for no good reason. So we remove the oldest.
+        if (performanceOfBestPlayerPerGeneration.Count > 500)
+        {
+            performanceOfBestPlayerPerGeneration.RemoveAt(0);
+            ++GenerationMultiplier; // compensate for the missing one
+        }
 
         // track the last 5 performance scores per brain
         foreach (Brain b in BrainsBeingTrained.Values)
@@ -642,7 +646,7 @@ internal class LearningFramework
         foreach (int id in BrainsBeingTrained.Keys)
         {
             LogWriter.Invoke(
-                $"{BrainsBeingTrained[id].Name,10} - DNA: {BrainsBeingTrained[id].DNA} Moves to mutation: {PersistentConfig.Settings.MovesBeforeMutation} Game Score: [{BrainsBeingTrained[id].RealScore,6}]  " +
+                $"{BrainsBeingTrained[id].Name,10} - DNA: {BrainsBeingTrained[id].DNA} Genome size: [{BrainsBeingTrained[id].GenomeSize}] Moves to mutation: {PersistentConfig.Settings.MovesBeforeMutation} Game Score: [{BrainsBeingTrained[id].RealScore,6}]  " +
                 $"High Score: [{BrainsBeingTrained[id].RealBestScore,6}]  AI Fitness: [{Math.Round(BrainsBeingTrained[id].Fitness),6}] AI Last Fitness: [{ Math.Round(BrainsBeingTrained[id].LastFitness),6}]  " +
                 $"AI Score (rank-by): [{Math.Round(BrainsBeingTrained[id].Score),6}] - Fitness Metrics: [{GetLast5PerformanceScoresForBrain(BrainsBeingTrained[id])}] " +
                 $"Lives: {BrainsBeingTrained[id].AIPlayer.gameController.Lives}");
@@ -654,25 +658,6 @@ internal class LearningFramework
 
         performanceOfBestPlayerPerGeneration.Add(new StatisticsForGraphs(bestBrain));
     }
-
-    /// <summary>
-    /// Remove every other performance stat, to reduce the size of the structure.
-    /// It's easy for it to grow to 5000+. Although we don't plot them, we might as well remove half
-    /// </summary>
-    private void RemoveEveryOtherPerformanceStat()
-    {
-        // -2, to keep the most recent one
-        for (int i = performanceOfBestPlayerPerGeneration.Count - 2; i >= 0; i--)
-        {
-            // the "0th" entry is the first, we preserve that.
-            if (i % 2 == 0 && i != 0)
-            {
-                performanceOfBestPlayerPerGeneration.RemoveAt(i);
-            }
-        }
-
-        GenerationMultiplier /= 2;
-    } 
 
     /// <summary>
     /// Returns the last 5 performances for this brain (or less, if it hasn't lasted that long).

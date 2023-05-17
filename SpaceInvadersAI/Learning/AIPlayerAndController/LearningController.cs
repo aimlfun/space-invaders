@@ -483,11 +483,11 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
                 AssignPlayerSummaryToTopPerformingBrain(x);
 
                 // we don't want the brain adding lots of pointless neurons unless it has a proportionate affect on fitness
-                // with a low number, it may be fairly impossible for it to grow healthily, so we don't penalise it until 12 or more
+                // with a low number, it may be fairly impossible for it to grow healthily, so we don't penalise it until 1.5 x inputs or more
                 if (x.brainControllingPlayerShip.Fitness > 0 &&
                     x.brainControllingPlayerShip.GenomeSize > (float)x.brainControllingPlayerShip.BrainInputs.Count * RarelyModifiedSettings.MinimumGenomeSizeNotToBePunishedForGrowthDisproportionateToScoreImprovement)
                 {
-                    s_learningFramework?.LogWriter($"{x.brainControllingPlayerShip.Name} genome size exceeded 1.x input count");
+                    s_learningFramework?.LogWriter($"{x.brainControllingPlayerShip.Name}: genome size {x.brainControllingPlayerShip.GenomeSize} exceeded {RarelyModifiedSettings.MinimumGenomeSizeNotToBePunishedForGrowthDisproportionateToScoreImprovement}x {x.brainControllingPlayerShip.BrainInputs.Count} (input count)");
 
                     float improvementRatio = x.brainControllingPlayerShip.LastFitness == 0 ? 1 : x.brainControllingPlayerShip.Fitness / x.brainControllingPlayerShip.LastFitness; // increase in fitness > 1, decrease <1
                     float growthRatio = x.brainControllingPlayerShip.LastOverallGenomeSize == 0 ? 0 : x.brainControllingPlayerShip.OverallGenomeSize / x.brainControllingPlayerShip.LastOverallGenomeSize; // increase in size >1, decrease <1

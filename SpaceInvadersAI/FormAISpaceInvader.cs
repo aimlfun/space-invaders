@@ -233,7 +233,8 @@ namespace SpaceInvadersAI
             e.Graphics.DrawLine(penGenerationUserClickedOn, x, 0, x, ((PictureBox)sender).Height - SimpleGraph.c_marginPXForLabels + 10);
 
             // Add generation label between labels, and title. It is centred on the vertical line.
-            string label = ((int) Math.Round((LearningFramework.GenerationMultiplier*(float) generationClickedOn))).ToString();
+            string label = (generationClickedOn +LearningFramework.GenerationMultiplier).ToString();
+      
             SizeF size = e.Graphics.MeasureString(label, SimpleGraph.s_defaultAxisLabelFont);
             e.Graphics.DrawString(label, SimpleGraph.s_defaultAxisLabelFont, Brushes.White, x - size.Width / 2, ((PictureBox)sender).Height - size.Height - 13);
         }

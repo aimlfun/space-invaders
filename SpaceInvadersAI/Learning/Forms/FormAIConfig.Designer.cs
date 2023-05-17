@@ -1512,7 +1512,7 @@
             label78.Name = "label78";
             label78.Size = new Size(601, 37);
             label78.TabIndex = 112;
-            label78.Text = "It can be taught to choose where to position the ship (and it moves towards) or one of 7 actions.";
+            label78.Text = "Defines what the AI uses to see the game.";
             // 
             // label80
             // 

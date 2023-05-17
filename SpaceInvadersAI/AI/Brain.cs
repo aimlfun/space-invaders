@@ -199,7 +199,7 @@ internal class Brain : IDisposable
                 dna += n.DNA.GetHashCode() + "~";
             }
 
-            return dna;
+            return dna.TrimEnd('~');
         }
     }
     /// <summary>
