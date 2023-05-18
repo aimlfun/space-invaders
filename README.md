@@ -9,7 +9,7 @@
        ███    █       █   █    ███    █████            ███    █   █     █     █   █   ████    █████   █   █    ███      
 
 
-From the blog post (coming soon) - https://aimlfun.com/space-invaders/, that has no affiliation with Taito Corp. / Square Enix and respects their trademark & copyright.
+From the blog posting - https://aimlfun.com/space-invaders/, that has no affiliation with Taito Corp. / Square Enix and respects their trademark & copyright.
 
 This application requires .net7 and Visual Studio 2022 (Community works).
 
