@@ -118,11 +118,11 @@ public partial class FormAIConfig : Form
     {
         if (radioButtonAIAccessInternalData.Checked)
         {
-            return "internal";
+            return "internalData";
         }
         else if (radioButtonAISeesScreen.Checked)
         {
-            return "video";
+            return "videoScreen";
         }
         else
         {
