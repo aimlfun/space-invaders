@@ -185,6 +185,7 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
 
             string template = "";
 
+            // if we have a template, read it in
             if (PersistentConfig.Settings.Template is not null && File.Exists(PersistentConfig.Settings.Template)) template = File.ReadAllText(PersistentConfig.Settings.Template);
 
             s_learningFramework = new LearningFramework(
@@ -314,10 +315,18 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
                     inputs = new();
 
                     // distance indicator
-                    for (int radarIndex = 0; radarIndex < 50; radarIndex++)
+                    for (int radarIndex = 0; radarIndex < 45; radarIndex++)
                     {
-                        inputs.Add($"radar-{radarIndex}");
+                        inputs.Add($"invader-radar-{radarIndex}");
                     }
+
+                    for (int radarIndex = 0; radarIndex < 15; radarIndex++)
+                    {
+                        inputs.Add($"shield-radar-{radarIndex}");
+                    }
+
+                    // AI is informed of the direction/speed the aliens are moving.
+                    inputs.Add($"alien-x-direction");
                     break;
 
                 default: throw new Exception("Unknown AI input mode");

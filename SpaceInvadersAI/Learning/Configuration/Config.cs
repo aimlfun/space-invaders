@@ -186,7 +186,7 @@ internal class PersistentConfig
     /// </summary>
     public AIInputMode InputToAI { get; set; } = AIInputMode.internalData;
 
-    public int AIRadarSamplePoints { get; set; } = 30;
+    public bool EndGameIfLifeLost { get; set; } = false;
     #endregion
 
     /// <summary>

@@ -44,10 +44,10 @@ public partial class FormAIConfig : Form
         if (File.Exists(c_invadersConfig)) PersistentConfig.Load(c_invadersConfig);
         FitnessScoreMultipliers.Load(c_invadersScore);
 
-        AddTemplatesToDropDown();
-
         RetrieveConfigAndPopulateUI();
         ComboBoxSelectionType_SelectedIndexChanged(null, null);
+  
+        AddTemplatesToDropDown();
     }
 
     /// <summary>
@@ -59,12 +59,20 @@ public partial class FormAIConfig : Form
 
         List<string> items = new();
 
-        IEnumerable<string> templates = Directory.EnumerateFiles(@".\Templates", "*.tem");
+        // The training goes with the AI input/output method, but more to the point, get it mixed up makes the code fall over.
+        // That's because the number of inputs and outputs is different.
+        string prefix = GetTemplatePrefixBasedOnAIInputMethod() + " " + GetTemplatePrefixBasedOnAIOutputMethod() + " ";
+        IEnumerable<string> templates = Directory.EnumerateFiles(@".\Templates", prefix + "*.tem");
         items.Add("-none selected-");
-        foreach (string filename in templates) items.Add(filename);
+
+        foreach (string filename in templates)
+        {
+            items.Add(filename);
+        }
 
         // clear the combo boxes
         comboBoxListOfTemplates.Items.Clear();
+        
         // template drop down
         comboBoxListOfTemplates.Items.AddRange(items.ToArray());
 
@@ -85,13 +93,50 @@ public partial class FormAIConfig : Form
 
             if (i < PersistentConfig.Settings.BrainTemplates.Count)
             {
+                // we have a setting in the config for this, so update the UI accordingly
                 startScoreInputs[i].Text = PersistentConfig.Settings.BrainTemplates[i].StartingScore.ToString();
                 levelRuleInputs[i].Text = PersistentConfig.Settings.BrainTemplates[i].LevelRule;
                 SetSelectedIndexOfComboBoxByValue(PersistentConfig.Settings.BrainTemplates[i].BrainTemplateFileName, levelComboBoxes[i]);
             }
+            else
+            {
+                // we not setting for this, so clear the UI
+                startScoreInputs[i].Text = "0";
+                levelRuleInputs[i].Text = "";
+                SetSelectedIndexOfComboBoxByValue("", levelComboBoxes[i]);
+            }
         }
 
         SetSelectedIndexOfComboBoxByValue(PersistentConfig.Settings.Template, comboBoxListOfTemplates);
+    }
+
+    /// <summary>
+    /// Used in the prefix when looking for templates.
+    /// </summary>
+    /// <returns></returns>
+    private string GetTemplatePrefixBasedOnAIInputMethod()
+    {
+        if (radioButtonAIAccessInternalData.Checked)
+        {
+            return "internal";
+        }
+        else if (radioButtonAISeesScreen.Checked)
+        {
+            return "video";
+        }
+        else
+        {
+            return "radar";
+        }
+    }
+
+    /// <summary>
+    /// Used in the prefix when looking for templates.
+    /// </summary>
+    /// <returns></returns>
+    private string GetTemplatePrefixBasedOnAIOutputMethod()
+    {
+        return radioButtonAIChoosesAction.Checked ? "action" : "position";
     }
 
     /// <summary>
@@ -194,15 +239,19 @@ public partial class FormAIConfig : Form
         numericUpDownDeathPct.Value = (decimal)(PersistentConfig.Settings.PercentageOfDeadScoreThreshold * 100f); // % to 0..100
         numericUpDownStartingScore.Value = (int)PersistentConfig.Settings.AIStartScore;
         radioButtonRandomNeurons.Checked = PersistentConfig.Settings.CreatingARandomNetwork;
+        checkBoxEndGameIfLifeLost.Checked = PersistentConfig.Settings.EndGameIfLifeLost;
 
+        // one enum => 3 radio buttons
         switch (PersistentConfig.Settings.InputToAI)
         {
             case PersistentConfig.AIInputMode.videoScreen:
                 radioButtonAISeesScreen.Checked = true;
                 break;
+
             case PersistentConfig.AIInputMode.radar:
                 radioButtonAISeesRadar.Checked = true;
                 break;
+
             case PersistentConfig.AIInputMode.internalData:
                 radioButtonAIAccessInternalData.Checked = true;
                 break;
@@ -372,6 +421,7 @@ public partial class FormAIConfig : Form
         PersistentConfig.Settings.AIStartLevel = (int)numericUpDownStartingLevel.Value;
         PersistentConfig.Settings.PercentageOfDeadScoreThreshold = (float)numericUpDownDeathPct.Value / 100;
         PersistentConfig.Settings.UseActionFireApproach = radioButtonAIChoosesAction.Checked;
+        PersistentConfig.Settings.EndGameIfLifeLost = checkBoxEndGameIfLifeLost.Checked;
 
         // an initial score only applies on levels 2 upwards
         if (PersistentConfig.Settings.AIStartLevel == 1) PersistentConfig.Settings.AIStartScore = 0;
@@ -408,7 +458,7 @@ public partial class FormAIConfig : Form
         // store the rules + templates
         PersistentConfig.Settings.BrainTemplates.Clear();
 
-        for (int i = 0; i < 9; i++)
+        for (int i = 0; i < 10; i++)
         {
             string level = levelRuleInputs[i].Text;
             string? template = "";
@@ -753,5 +803,21 @@ public partial class FormAIConfig : Form
             2 => "Makes an entirely random selection of brains from the population (up to the selection size), sorts them in descending order, stepping in order best to worst it stops on a brain if the random number generator picks it.",
             _ => "Unknown selection type.",
         };
+    }
+
+    /// <summary>
+    /// I accidentally crashed the app by changing this, and forgetting that the neuron mismatch between input/out and template definition are incompatible.
+    /// Thus when this changes, it refreshes the list of templates to match suitable brains; and informs the user.
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
+    private void RadioButtonAIInputOrOutputMethodChanged_Click(object sender, EventArgs e)
+    {
+        if (comboBoxLevelBrain1.SelectedIndex > 0)
+        {
+            MessageBox.Show("Changing the input/output method requires use of different brain templates.\n\nSelected templates for level rules have been reset.", "Space Invader AI - Information", MessageBoxButtons.OK);
+        }
+
+        AddTemplatesToDropDown();       
     }
 }

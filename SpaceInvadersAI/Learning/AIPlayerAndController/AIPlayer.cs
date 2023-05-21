@@ -110,7 +110,7 @@ internal class AIPlayer : IDisposable
     {        
         videoDisplay = new VideoDisplay();
 
-        gameController = new(videoDisplay, brain.HighScore, PersistentConfig.Settings.AIPlaysWithShields, PersistentConfig.Settings.AIOneLevelOnly, PersistentConfig.Settings.AIStartLevel);
+        gameController = new(videoDisplay, brain.HighScore, PersistentConfig.Settings.AIPlaysWithShields, PersistentConfig.Settings.AIOneLevelOnly, PersistentConfig.Settings.AIStartLevel, PersistentConfig.Settings.EndGameIfLifeLost);
 
         uniquePlayerIdentifier = id;
 
@@ -140,7 +140,7 @@ internal class AIPlayer : IDisposable
         neuralNetworkInput = PersistentConfig.Settings.InputToAI switch
         {
             AIInputMode.videoScreen => gameController.AIGetShrunkScreen(),// (shrunk to 56x64)
-            AIInputMode.internalData => gameController.AIGetObjectArray().ToArray(),
+            AIInputMode.internalData => gameController.AIGetObjectArray(),
             AIInputMode.radar => gameController.AIGetRadarArray(),
             _ => throw new NotImplementedException(),
         };
@@ -323,7 +323,7 @@ internal class AIPlayer : IDisposable
 
         // we write these to the screen once for performance reasons. Just to show off, we do so using our video display code not onto a Bitmap.
 
-        DrawStringRightAlignedTo(brainControllingPlayerShip.Provenance, fontAnnotation, Brushes.White, 224-16, 15, graphics);
+        DrawStringRightAlignedTo(brainControllingPlayerShip.Provenance, fontAnnotation, Brushes.White, 224 - 16, 23, graphics);
         
         // remove the CREDIT 00 or the previous label
         graphics.FillRectangle(Brushes.Black, 130, 244, 93, 11);

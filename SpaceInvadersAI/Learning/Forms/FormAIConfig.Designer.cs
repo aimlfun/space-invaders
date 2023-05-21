@@ -131,6 +131,8 @@
             label3 = new Label();
             label2 = new Label();
             tabPageAISettings = new TabPage();
+            label54 = new Label();
+            checkBoxEndGameIfLifeLost = new CheckBox();
             label51 = new Label();
             label93 = new Label();
             label92 = new Label();
@@ -1366,6 +1368,8 @@
             // 
             // tabPageAISettings
             // 
+            tabPageAISettings.Controls.Add(label54);
+            tabPageAISettings.Controls.Add(checkBoxEndGameIfLifeLost);
             tabPageAISettings.Controls.Add(label51);
             tabPageAISettings.Controls.Add(label93);
             tabPageAISettings.Controls.Add(label92);
@@ -1396,10 +1400,29 @@
             tabPageAISettings.Text = "AI Settings";
             tabPageAISettings.UseVisualStyleBackColor = true;
             // 
+            // label54
+            // 
+            label54.Font = new Font("Segoe UI Variable Display", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            label54.Location = new Point(26, 441);
+            label54.Name = "label54";
+            label54.Size = new Size(848, 23);
+            label54.TabIndex = 119;
+            label54.Text = "For an infinity score, losing a life is not acceptable.";
+            // 
+            // checkBoxEndGameIfLifeLost
+            // 
+            checkBoxEndGameIfLifeLost.AutoSize = true;
+            checkBoxEndGameIfLifeLost.Location = new Point(20, 424);
+            checkBoxEndGameIfLifeLost.Name = "checkBoxEndGameIfLifeLost";
+            checkBoxEndGameIfLifeLost.Size = new Size(130, 19);
+            checkBoxEndGameIfLifeLost.TabIndex = 120;
+            checkBoxEndGameIfLifeLost.Text = "End game if life lost";
+            checkBoxEndGameIfLifeLost.UseVisualStyleBackColor = true;
+            // 
             // label51
             // 
             label51.AutoSize = true;
-            label51.Location = new Point(169, 365);
+            label51.Location = new Point(169, 333);
             label51.Name = "label51";
             label51.Size = new Size(64, 15);
             label51.TabIndex = 118;
@@ -1408,17 +1431,17 @@
             // label93
             // 
             label93.Font = new Font("Segoe UI Variable Display", 9F, FontStyle.Regular, GraphicsUnit.Point);
-            label93.Location = new Point(26, 387);
+            label93.Location = new Point(26, 355);
             label93.Name = "label93";
-            label93.Size = new Size(848, 35);
+            label93.Size = new Size(848, 20);
             label93.TabIndex = 117;
-            label93.Text = "For independent level training, you need to start on the score the prior level completes at";
+            label93.Text = "For independent level training, you need to start on the score the prior level completes at.";
             // 
             // label92
             // 
             label92.AutoSize = true;
             label92.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold, GraphicsUnit.Point);
-            label92.Location = new Point(15, 365);
+            label92.Location = new Point(15, 333);
             label92.Name = "label92";
             label92.Size = new Size(83, 15);
             label92.TabIndex = 116;
@@ -1426,7 +1449,7 @@
             // 
             // numericUpDownStartingScore
             // 
-            numericUpDownStartingScore.Location = new Point(102, 363);
+            numericUpDownStartingScore.Location = new Point(102, 331);
             numericUpDownStartingScore.Maximum = new decimal(new int[] { 100000, 0, 0, 0 });
             numericUpDownStartingScore.Name = "numericUpDownStartingScore";
             numericUpDownStartingScore.Size = new Size(62, 23);
@@ -1451,6 +1474,7 @@
             radioButtonAISeesRadar.TabIndex = 36;
             radioButtonAISeesRadar.Text = "Radar";
             radioButtonAISeesRadar.UseVisualStyleBackColor = true;
+            radioButtonAISeesRadar.Click += RadioButtonAIInputOrOutputMethodChanged_Click;
             // 
             // radioButtonAIAccessInternalData
             // 
@@ -1463,6 +1487,7 @@
             radioButtonAIAccessInternalData.TabStop = true;
             radioButtonAIAccessInternalData.Text = "Internal Data";
             radioButtonAIAccessInternalData.UseVisualStyleBackColor = true;
+            radioButtonAIAccessInternalData.Click += RadioButtonAIInputOrOutputMethodChanged_Click;
             // 
             // radioButtonAISeesScreen
             // 
@@ -1473,6 +1498,7 @@
             radioButtonAISeesScreen.TabIndex = 34;
             radioButtonAISeesScreen.Text = "Screen";
             radioButtonAISeesScreen.UseVisualStyleBackColor = true;
+            radioButtonAISeesScreen.Click += RadioButtonAIInputOrOutputMethodChanged_Click;
             // 
             // panel4
             // 
@@ -1492,6 +1518,7 @@
             radioButtonAIChoosesAction.TabIndex = 37;
             radioButtonAIChoosesAction.Text = "Action";
             radioButtonAIChoosesAction.UseVisualStyleBackColor = true;
+            radioButtonAIChoosesAction.Click += RadioButtonAIInputOrOutputMethodChanged_Click;
             // 
             // radioButtonAIChoosesPosition
             // 
@@ -1504,6 +1531,7 @@
             radioButtonAIChoosesPosition.TabStop = true;
             radioButtonAIChoosesPosition.Text = "Position";
             radioButtonAIChoosesPosition.UseVisualStyleBackColor = true;
+            radioButtonAIChoosesPosition.Click += RadioButtonAIInputOrOutputMethodChanged_Click;
             // 
             // label78
             // 
@@ -1556,7 +1584,7 @@
             // label84
             // 
             label84.Font = new Font("Segoe UI Variable Display", 9F, FontStyle.Regular, GraphicsUnit.Point);
-            label84.Location = new Point(26, 439);
+            label84.Location = new Point(26, 398);
             label84.Name = "label84";
             label84.Size = new Size(848, 23);
             label84.TabIndex = 103;
@@ -1565,7 +1593,7 @@
             // label85
             // 
             label85.AutoSize = true;
-            label85.Location = new Point(166, 304);
+            label85.Location = new Point(166, 281);
             label85.Name = "label85";
             label85.Size = new Size(90, 15);
             label85.TabIndex = 102;
@@ -1574,7 +1602,7 @@
             // label86
             // 
             label86.Font = new Font("Segoe UI Variable Display", 9F, FontStyle.Regular, GraphicsUnit.Point);
-            label86.Location = new Point(26, 323);
+            label86.Location = new Point(26, 300);
             label86.Name = "label86";
             label86.Size = new Size(776, 24);
             label86.TabIndex = 101;
@@ -1592,7 +1620,7 @@
             // label88
             // 
             label88.AutoSize = true;
-            label88.Location = new Point(166, 243);
+            label88.Location = new Point(166, 230);
             label88.Name = "label88";
             label88.Size = new Size(17, 15);
             label88.TabIndex = 99;
@@ -1601,7 +1629,7 @@
             // label89
             // 
             label89.Font = new Font("Segoe UI Variable Display", 9F, FontStyle.Regular, GraphicsUnit.Point);
-            label89.Location = new Point(26, 262);
+            label89.Location = new Point(26, 249);
             label89.Name = "label89";
             label89.Size = new Size(801, 21);
             label89.TabIndex = 98;
@@ -1611,7 +1639,7 @@
             // 
             label90.AutoSize = true;
             label90.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold, GraphicsUnit.Point);
-            label90.Location = new Point(15, 303);
+            label90.Location = new Point(15, 280);
             label90.Name = "label90";
             label90.Size = new Size(79, 15);
             label90.TabIndex = 97;
@@ -1619,7 +1647,7 @@
             // 
             // numericUpDownStartingLevel
             // 
-            numericUpDownStartingLevel.Location = new Point(101, 299);
+            numericUpDownStartingLevel.Location = new Point(101, 276);
             numericUpDownStartingLevel.Maximum = new decimal(new int[] { 20, 0, 0, 0 });
             numericUpDownStartingLevel.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             numericUpDownStartingLevel.Name = "numericUpDownStartingLevel";
@@ -1641,7 +1669,7 @@
             // 
             label91.AutoSize = true;
             label91.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold, GraphicsUnit.Point);
-            label91.Location = new Point(15, 239);
+            label91.Location = new Point(15, 226);
             label91.Name = "label91";
             label91.Size = new Size(73, 15);
             label91.TabIndex = 96;
@@ -1650,7 +1678,7 @@
             // numericUpDownDeathPct
             // 
             numericUpDownDeathPct.DecimalPlaces = 2;
-            numericUpDownDeathPct.Location = new Point(101, 238);
+            numericUpDownDeathPct.Location = new Point(101, 225);
             numericUpDownDeathPct.Name = "numericUpDownDeathPct";
             numericUpDownDeathPct.Size = new Size(62, 23);
             numericUpDownDeathPct.TabIndex = 105;
@@ -1659,7 +1687,7 @@
             // checkBoxOneLevelOnly
             // 
             checkBoxOneLevelOnly.AutoSize = true;
-            checkBoxOneLevelOnly.Location = new Point(20, 422);
+            checkBoxOneLevelOnly.Location = new Point(20, 381);
             checkBoxOneLevelOnly.Name = "checkBoxOneLevelOnly";
             checkBoxOneLevelOnly.Size = new Size(85, 19);
             checkBoxOneLevelOnly.TabIndex = 107;
@@ -2494,5 +2522,7 @@
         private Label label94;
         private NumericUpDown numericUpDownGroundPunishment;
         private RadioButton radioButtonAISeesRadar;
+        private Label label54;
+        private CheckBox checkBoxEndGameIfLifeLost;
     }
 }

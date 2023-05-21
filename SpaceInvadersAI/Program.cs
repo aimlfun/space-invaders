@@ -1,4 +1,5 @@
 ﻿using SpaceInvadersAI.AI;
+using SpaceInvadersAI.Learning.AIPlayerAndController;
 using SpaceInvadersCore;
 using SpaceInvadersCore.Game;
 using SpaceInvadersCore.Tests;
@@ -25,7 +26,7 @@ namespace SpaceInvadersAI
 
             //TestHarnessForBrainSerialisation.PerformTest();
             //TestHarnessForVideo.PerformTest();
-
+            
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();

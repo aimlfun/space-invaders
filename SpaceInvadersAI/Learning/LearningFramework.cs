@@ -347,6 +347,7 @@ internal class LearningFramework
 
         if (NeuronLayerDefinition is not null)
         {
+            // default the neuron layers to the same as the input if user puts "0".
             for (int i = 0; i < NeuronLayerDefinition.Length; i++) if (NeuronLayerDefinition[i] == 0) NeuronLayerDefinition[i] = inputParameterNames.Length; // 0=same as input
         }
 
@@ -360,12 +361,12 @@ internal class LearningFramework
         cellTypesAllowedForMutation = cellTypeRatios;
         Selection = selectionType;
 
-        LogWriter.Invoke($"DesiredBrainPopulationSize: {DesiredBrainPopulationSize}");
+        LogWriter.Invoke($"population size: {DesiredBrainPopulationSize}");
         LogWriter.Invoke($"cellTypesAllowedForMutation: {string.Join("|", cellTypesAllowedForMutation.Keys)}");
         LogWriter.Invoke($"% elite to preserve: {topBrainsToPreservePercentage}");
         LogWriter.Invoke($"Mutation methods: {string.Join("|", mutationMethods)}");
         LogWriter.Invoke($"% chance of mutation: {PercentageChanceOfMutation}");
-        LogWriter.Invoke($"MutationAmount: {HowManyTimesToMutateANeuron}");
+        LogWriter.Invoke($"# mutations per neuron: {HowManyTimesToMutateANeuron}");
         LogWriter.Invoke($"SelectionType: {Selection}");
 
         InitialiseBrains();
@@ -397,7 +398,7 @@ internal class LearningFramework
         StatisticsForGraphs bestPlayerAI = LearningController.s_learningFramework.performanceOfBestPlayerPerGeneration[^1];
 
         // get unique filename in .\Templates\
-        File.WriteAllText($@".\Templates\s={bestPlayerAI.Score} lvl={bestPlayerAI.Level} ik={bestPlayerAI.InvadersKilled} sk={bestPlayerAI.SaucersKilled}.tem", bestBrain.GetAsTemplate());
+        File.WriteAllText($@".\Templates\{PersistentConfig.Settings.InputToAI} {(PersistentConfig.Settings.UseActionFireApproach ? "action" : "position")} s={bestPlayerAI.Score} lvl={bestPlayerAI.Level} ik={bestPlayerAI.InvadersKilled} sk={bestPlayerAI.SaucersKilled}.tem", bestBrain.GetAsTemplate());
     }
 
     /// <summary>
@@ -420,7 +421,7 @@ internal class LearningFramework
 
         // make our new population of brains
         CreateNextGenerationOfBrains(out List<Brain> newBrainsList);
-        
+
         // explicitly dispose of brains that are not in the new generation
         RemoveLastGenerationBrainsThatAreNotPresentInThisGeneration(newBrainsList);
 
@@ -497,7 +498,7 @@ internal class LearningFramework
 
         // We add these back in the elites after (avoids mutation of perfectly good brains).
         // insert at the start of the list, so they are first on screen.
-        foreach(Brain b in elitists) newBrainsList.Insert(0,b);
+        foreach (Brain b in elitists) newBrainsList.Insert(0, b);
 
         if (newBrainsList.Count != PersistentConfig.Settings.ConcurrentGames) Debugger.Break();
     }
@@ -588,7 +589,7 @@ internal class LearningFramework
     private List<Brain> CreateEliteBrainsThenAddToNextGenerationPopulation(Brain[] brainArray)
     {
         List<Brain> elitists = new(); // store the top % of brains
-        
+
         int pctToPreserve = (int)((float)PercentageOfElitesToPreserve * (float)brainArray.Length / 100); // how many to preserve
         int eliteAddedCount = 0; // how many we've added so far
 
@@ -598,7 +599,7 @@ internal class LearningFramework
             if (brainArray[i].Fitness > 0)
             {
                 elitists.Add(brainArray[i]);
-             
+
                 brainArray[i].GenerationOfLastMutation++;
                 brainArray[i].LastFitness = brainArray[i].Fitness;
                 brainArray[i].Provenance = "Elite";
@@ -637,7 +638,7 @@ internal class LearningFramework
             b.Performance.Insert(0, (int)(b.Fitness));
 
             if (b.Score > bestEverFitnessAchievedByABrain) bestEverFitnessAchievedByABrain = b.Score;
-            if (b.RealScore > bestEverRealScore) bestEverRealScore = b.RealScore; 
+            if (b.RealScore > bestEverRealScore) bestEverRealScore = b.RealScore;
             if (b.Performance.Count > 5) b.Performance.RemoveAt(5);
         }
 
@@ -647,12 +648,12 @@ internal class LearningFramework
         {
             LogWriter.Invoke(
                 $"{BrainsBeingTrained[id].Name,10} - DNA: {BrainsBeingTrained[id].DNA} Genome size: [{BrainsBeingTrained[id].GenomeSize}] Moves to mutation: {PersistentConfig.Settings.MovesBeforeMutation} Game Score: [{BrainsBeingTrained[id].RealScore,6}]  " +
-                $"High Score: [{BrainsBeingTrained[id].RealBestScore,6}]  AI Fitness: [{Math.Round(BrainsBeingTrained[id].Fitness),6}] AI Last Fitness: [{ Math.Round(BrainsBeingTrained[id].LastFitness),6}]  " +
+                $"High Score: [{BrainsBeingTrained[id].RealBestScore,6}]  AI Fitness: [{Math.Round(BrainsBeingTrained[id].Fitness),6}] AI Last Fitness: [{Math.Round(BrainsBeingTrained[id].LastFitness),6}]  " +
                 $"AI Score (rank-by): [{Math.Round(BrainsBeingTrained[id].Score),6}] - Fitness Metrics: [{GetLast5PerformanceScoresForBrain(BrainsBeingTrained[id])}] " +
                 $"Lives: {BrainsBeingTrained[id].AIPlayer.gameController.Lives}");
             LogWriter.Invoke($"      calculation: {BrainsBeingTrained[id].FitnessSummary.Replace("\n", " ")}\n");
         }
-   
+
         bestBrain = BrainsBeingTrained.Values.ToArray()[0]; // top is best
         bestBrainInfo = bestBrain.PlayerSummary;
 
@@ -736,7 +737,7 @@ internal class LearningFramework
 
         foreach (Brain n in BrainsBeingTrained.Values)
         {
-            n.Score = n.Fitness; 
+            n.Score = n.Fitness;
         }
 
         // sort so that highest fitness is the 0 entry, and worst is at the bottom.
