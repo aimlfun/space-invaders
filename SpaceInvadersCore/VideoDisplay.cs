@@ -20,6 +20,8 @@ namespace SpaceInvadersCore;
 /// PLEASE NOTE: 
 /// It is using "unsafe" and manipulating memory directly. This is not for the faint of heart.
 /// I intentionally have not performed bounds checking of x/y, because each check is a performance hit.
+/// 
+/// For RADAR to work, it has to set the ALPHA channel. Alas that impacts the performance slightly of non RADAR mode.
 /// </summary>
 public class VideoDisplay
 {
@@ -187,7 +189,7 @@ public class VideoDisplay
             BackBuffer[index /*+ c_offsetBlueChannel*/] = colour.B;  // blue offset is always 0, so we don't need to include it +0.
             BackBuffer[index + c_offsetGreenChannel] = colour.G;
             BackBuffer[index + c_offsetRedChannel] = colour.R;
-            BackBuffer[index + c_offsetAlphaChannel] = colour.A; // do not remove this line, it is required for the game to work (it assumes alpha is 255)
+            BackBuffer[index + c_offsetAlphaChannel] = 255;
         }
     }
 
@@ -211,14 +213,13 @@ public class VideoDisplay
             BackBuffer[index1 /*+ c_offsetBlueChannel*/] = colour.B;  // blue offset is always 0, so we don't need to include it +0.
             BackBuffer[index1 + c_offsetGreenChannel] = colour.G;
             BackBuffer[index1 + c_offsetRedChannel] = colour.R;
-            // BackBuffer[index1 + c_offsetAlphaChannel] = colour.A; // alpha is always 255, set by .ClearDisplay()
-
+            BackBuffer[index1 + c_offsetAlphaChannel] = colour.A; // alpha is always 255, set by .ClearDisplay()
             index1 = x * c_bytesPerPixel + bottom; // find first pixel in the row
 
             BackBuffer[index1 /*+ c_offsetBlueChannel*/] = colour.B; // blue offset is always 0, so we don't need to include it +0.
             BackBuffer[index1 + c_offsetGreenChannel] = colour.G;
             BackBuffer[index1 + c_offsetRedChannel] = colour.R;
-            // BackBuffer[index1 + c_offsetAlphaChannel] = colour.A; // alpha is always 255, set by .ClearDisplay()
+            BackBuffer[index1 + c_offsetAlphaChannel] = colour.A; // alpha is always 255, set by .ClearDisplay()
         }
 
         // vertical edges
@@ -229,14 +230,14 @@ public class VideoDisplay
             BackBuffer[index4 /*+ c_offsetBlueChannel*/] = colour.B; // blue offset is always 0, so we don't need to include it +0.
             BackBuffer[index4 + c_offsetGreenChannel] = colour.G;
             BackBuffer[index4 + c_offsetRedChannel] = colour.R;
-            //BackBuffer[index4 + c_offsetAlphaChannel] = colour.A; // alpha is always 255, set by .ClearDisplay()
+            BackBuffer[index4 + c_offsetAlphaChannel] = colour.A; // alpha is always 255, set by .ClearDisplay()
 
             index4 = right + y * c_offsetToMoveToNextRasterLine; // find first pixel in the row
 
             BackBuffer[index4 /*+ c_offsetBlueChannel*/] = colour.B; // blue offset is always 0, so we don't need to include it +0.
             BackBuffer[index4 + c_offsetGreenChannel] = colour.G;
             BackBuffer[index4 + c_offsetRedChannel] = colour.R;
-            // BackBuffer[index4 + c_offsetAlphaChannel] = colour.A; // alpha is always 255, set by .ClearDisplay()
+            BackBuffer[index4 + c_offsetAlphaChannel] = colour.A; // alpha is always 255, set by .ClearDisplay()
         }
     }
 
@@ -262,8 +263,7 @@ public class VideoDisplay
                     *(pPixel /*+ c_offsetBlueChannel*/) = colour.B;  // blue offset is always 0, so we don't need to include it +0.
                     *(pPixel + c_offsetGreenChannel) = colour.G;
                     *(pPixel + c_offsetRedChannel) = colour.R;
-                    //*(pPixel + c_offsetAlphaChannel) = colour.A; // alpha is always 255, set by .ClearDisplay()
-
+                    *(pPixel + c_offsetAlphaChannel) = 255; // colour.A; // alpha is always 255, set by .ClearDisplay()
                     pPixel += c_bytesPerPixel; // move to the next pixel
                 }
 
@@ -351,13 +351,55 @@ public class VideoDisplay
                         *(pPixel /*+ c_offsetBlueChannel*/) = thisPixel.B;  // blue offset is always 0, so we don't need to include it +0.
                         *(pPixel + c_offsetGreenChannel) = thisPixel.G;
                         *(pPixel + c_offsetRedChannel) = thisPixel.R;
-                        //*(pPixel + c_offsetAlphaChannel) = thisPixel.A; // alpha is always 255, set by .ClearDisplay()
+                        *(pPixel + c_offsetAlphaChannel) = 255; // thisPixel.A; // alpha is always 255, set by .ClearDisplay()
                     }
                 }
             }
         }
     }
 
+    /// <summary>
+    /// Draws a sprite on the screen at the specified location.
+    /// </summary>
+    /// <param name="sprite"></param>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    public unsafe void DrawShield(Sprite sprite, int x, int y)
+    {
+        // debugging? Show a box around the sprite (before drawing it)
+        if (c_drawBoxesAroundSprites) DrawRectangle(Color.Blue, new Rectangle(x, y, sprite.WidthInPX, sprite.HeightInPX));
+
+        int bufferOffset = c_offsetToMoveToNextRasterLine * y + x * c_bytesPerPixel;
+
+        fixed (byte* pBuffer = BackBuffer)
+        {
+            for (int yOffset = 0; yOffset < sprite.HeightInPX; yOffset++)
+            {
+                byte* yRaster = pBuffer + bufferOffset + yOffset * c_offsetToMoveToNextRasterLine;
+
+                Color colour = ColourBasedOnFilm(y + yOffset);
+
+                for (int xOffset = 0; xOffset < sprite.WidthInPX; xOffset++)
+                {
+                    if (sprite.Pixels[xOffset, yOffset] != 0)
+                    {
+                        Color thisPixel;
+
+                        // there is a film for the extra lives, this "DrawSprite" is used to also draw the extra lives, so we need to ensure the extra lives are drawn in the correct colour.
+                        if (yOffset + y > OriginalDataFrom1978.c_greenLineIndicatingFloorPX && x > 16 && x < 136) thisPixel = OriginalDataFrom1978.s_playerColour; else thisPixel = colour;
+
+                        byte* pPixel = yRaster + xOffset * c_bytesPerPixel;
+
+                        *(pPixel /*+ c_offsetBlueChannel*/) = thisPixel.B;  // blue offset is always 0, so we don't need to include it +0.
+                        *(pPixel + c_offsetGreenChannel) = thisPixel.G;
+                        *(pPixel + c_offsetRedChannel) = thisPixel.R;
+
+                        *(pPixel + c_offsetAlphaChannel) = 252; // we need to detect
+                    }
+                }
+            }
+        }
+    }
     /// <summary>
     /// Draws the sprite to our back buffer, whilst checking for collisions before setting the pixel.
     /// i.e. it only checks for collision on the pixels we draw in colour, not the black (transparent) pixels.
@@ -396,8 +438,7 @@ public class VideoDisplay
                         *(pPixel /*+ c_offsetBlueChannel*/) = colour.B; // blue offset is always 0, so we don't need to include it +0.
                         *(pPixel + c_offsetGreenChannel) = colour.G;
                         *(pPixel + c_offsetRedChannel) = colour.R;
-                        //*(pPixel + c_offsetAlphaChannel) = colour.A; // alpha is always 255, set by .ClearDisplay() - this saves updating 1 byte per pixel (performance)
-
+                        *(pPixel + c_offsetAlphaChannel) = 255; // colour.A; // alpha is always 255, set by .ClearDisplay() - this saves updating 1 byte per pixel (performance)
                     }
                 }
 
@@ -434,7 +475,7 @@ public class VideoDisplay
                         *(pPixel /*+ c_offsetBlueChannel*/) = 0;  // blue offset is always 0, so we don't need to include it +0.
                         *(pPixel + c_offsetGreenChannel) = 0;
                         *(pPixel + c_offsetRedChannel) = 0;
-                        // We intentionally don't set alpha, as it's always 255 after initialisation. This saves updating 1 byte per pixel (performance)
+                        *(pPixel + c_offsetAlphaChannel) = 255;
                     }
                 }
 
@@ -489,8 +530,7 @@ public class VideoDisplay
                 *(pPixel /*+ c_offsetBlueChannel*/) = colour.B;  // blue offset is always 0, so we don't need to include it +0.
                 *(pPixel + c_offsetGreenChannel) = colour.G;
                 *(pPixel + c_offsetRedChannel) = colour.R;
-                //*(pPixel + c_offsetAlphaChannel) = colour.A; // alpha is always 255, set by .ClearDisplay() - this saves updating 1 byte per pixel (performance)
-
+                *(pPixel + c_offsetAlphaChannel) = 255;
                 pPixel += c_bytesPerPixel;
             }
         }
@@ -515,7 +555,7 @@ public class VideoDisplay
                 *(pPixel /*+ c_offsetBlueChannel*/) = colour.B;  // blue offset is always 0, so we don't need to include it +0.
                 *(pPixel + c_offsetGreenChannel) = colour.G;
                 *(pPixel + c_offsetRedChannel) = colour.R;
-                //*(pPixel + c_offsetAlphaChannel) = colour.A; // alpha is always 255, set by .ClearDisplay() - this saves updating 1 byte per pixel (performance)
+                *(pPixel + c_offsetAlphaChannel) = colour.A; // alpha is always 255, set by .ClearDisplay() - this saves updating 1 byte per pixel (performance)
 
                 pPixel += c_offsetToMoveToNextRasterLine;
             }
@@ -735,12 +775,12 @@ public class VideoDisplay
     /// <param name="rectangle"></param>
     public void SetPixel(Color colour, Point point)
     {
-        int index1 = point.X * c_bytesPerPixel + point.Y * c_offsetToMoveToNextRasterLine;
+        int offsetInBackBuffer = point.X * c_bytesPerPixel + point.Y * c_offsetToMoveToNextRasterLine;
 
-        BackBuffer[index1 /*+ c_offsetBlueChannel*/] = colour.B;  // blue offset is always 0, so we don't need to include it +0.
-        BackBuffer[index1 + c_offsetGreenChannel] = colour.G;
-        BackBuffer[index1 + c_offsetRedChannel] = colour.R;
-        BackBuffer[index1 + c_offsetAlphaChannel] = colour.A;
+        BackBuffer[offsetInBackBuffer /*+ c_offsetBlueChannel*/] = colour.B;  // blue offset is always 0, so we don't need to include it +0.
+        BackBuffer[offsetInBackBuffer + c_offsetGreenChannel] = colour.G;
+        BackBuffer[offsetInBackBuffer + c_offsetRedChannel] = colour.R;
+        BackBuffer[offsetInBackBuffer + c_offsetAlphaChannel] = colour.A;
     }
 
     /// <summary>

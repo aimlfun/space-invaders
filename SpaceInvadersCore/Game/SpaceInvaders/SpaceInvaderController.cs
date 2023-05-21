@@ -130,6 +130,11 @@ internal class SpaceInvaderController
     /// </summary>
     private int XDirection = 1;
 
+    public int DirectionAndSpeedOfInvaders
+    {
+        get { return XDirection; }
+    }
+
     /// <summary>
     /// This indicates whether there are Space Invaders remaining. It saves counting.
     /// </summary>
@@ -654,29 +659,33 @@ internal class SpaceInvaderController
     /// <param name="reloadPause"></param>
     private static void ApplyAReloadPauseBetweenFiring(int score, ref int reloadPause)
     {
+        // I messed this up first go. The assembler uses binary coded decimal to store the score...
+
         // ReloadCounter starts when the shot is dropped and counts up with each step as it falls.
-        // The game keeps a constant reload rate that determines how fast the aliens can fire. The game takes the smallest count of the other two shots and compares it
+        // The game keeps a constant reload rate that determines how fast the aliens can fire. The
+        // game takes the smallest count of the other two shots and compares it
         // to the reload rate. If it is too soon since the last shot then no shot is fired.
 
         // The reload rate gets faster as the game progresses. The code uses the upper two digits of the player's score to set the reload rate.
-        // < 0x0200 => 0x30.
-        // 0x0200 to 0x1000 => 0x10.
-        // 0x1000 to 0x2000 => 0x0B.
-        // 0x2000 to 0x3000 => 8
-        // > 0x3000 => 7. With a little flying-saucer-luck you will reach 0x3000 in 2 or 3 racks.
+        // < 200 => 48 (0x30)
+        // 200 to 1000 => 16 (0x10)
+        // 1000 to 2000 => 11 (0x0B)
+        // 2000 to 3000 => 8
+        // 3000 => 7. With a little flying-saucer-luck you will reach 3000 in 2 or 3 racks.
+        // Assembly code for this is is at $170E
 
-        int scoreMSB = score / 256;
+        int scoreMSB = score / 100; // not 256
 
-        if (scoreMSB < 2)
+        if (scoreMSB < 2)  // < 200
             reloadPause = 48; //0x30
         else
-        if (scoreMSB < 16)
+        if (scoreMSB < 10) // < 1000
             reloadPause = 16; //0x10
         else
-        if (scoreMSB < 32)
+        if (scoreMSB < 20)  // < 2000
             reloadPause = 11; //0x0B
         else
-        if (scoreMSB < 48)
+        if (scoreMSB < 30) // < 3000
             reloadPause = 8;
         else
             reloadPause = 7;

@@ -26,6 +26,11 @@ namespace SpaceInvadersCore.Game
         const int c_invaderPointsRow3and4 = 10;
 
         /// <summary>
+        /// The points awarded for killing an invader indexed by the row of the invader.
+        /// </summary>
+        private int[] invaderPoints = new[] { c_invaderPointsRow3and4, c_invaderPointsRow3and4, c_invaderPointsRow1and2, c_invaderPointsRow1and2, c_invaderPointsRow0 };
+        
+        /// <summary>
         /// This is the rectangle that will be used to draw the score.
         /// </summary>
         private static Rectangle s_scoreRectangle = new(24, 24, 32, 8);
@@ -139,7 +144,7 @@ namespace SpaceInvadersCore.Game
 
             // We don't "erase" the score, we just draw over it with black. Erasing would be slower, and we don't have to avoid pixels like bullets.
             videoScreen.FillRectangle(Color.Black, s_scoreRectangle);
-            videoScreen.DrawString(score.ToString().PadLeft(4, '0'), s_scoreLocation);
+            videoScreen.DrawString(ScoreAfter10KUsingSymbols(score), s_scoreLocation);
 
             // If the score is higher than the high score, update the high score (not every time, just when it changes).
             if (Score > HighScore)
@@ -159,7 +164,40 @@ namespace SpaceInvadersCore.Game
             // I really want to add 8px to "88" so it's centred, but I'm not going to.
 
             videoScreen.FillRectangle(Color.Black, s_highScoreRectangle);
-            videoScreen.DrawString(HighScore.ToString().PadLeft(4, '0'), s_highScoreLocation);
+            videoScreen.DrawString(ScoreAfter10KUsingSymbols(HighScore), s_highScoreLocation);
+        }
+
+        /// <summary>
+        /// Space Invaders loops around to 0 after 9990, and only has space for 4 digits.
+        /// Given we are not putting it back to 0, we need to convert the score to a string that fits in 4 digits,
+        /// so we use symbols to represent 10K, 100K, 1M.
+        /// 0000-9999
+        ///  10K-999K
+        ///  1M-99999999M, at which point the display will be a mess as it does not erase fully scores > 4 chars.
+        /// Decimal points are not an option, with the limited screen space.
+        /// </summary>
+        /// <param name="scoreToConvert"></param>
+        /// <returns></returns>
+        private string ScoreAfter10KUsingSymbols(int scoreToConvert)
+        {
+            if (scoreToConvert < 10000)
+            {
+                return scoreToConvert.ToString().PadLeft(4, '0');
+            }
+            else
+            {
+                // measuring score in millions?
+                if (score >= 1000000)
+                {
+                    scoreToConvert /= 1000000;
+                    return scoreToConvert.ToString() + "M";
+                }
+
+                // measuring score in thousands?
+                // 10000 = 10K
+                scoreToConvert /= 1000;
+                return scoreToConvert.ToString() + "K";
+            }
         }
 
         /// <summary>
@@ -173,13 +211,22 @@ namespace SpaceInvadersCore.Game
             // data starts out pointing to the first entry. Every time the player's shot blows up the pointer is incremented and wraps back around.
             playerShots %= 15; // 0..14
 
-            int scoreBefore = score;
-
-            score += OriginalDataFrom1978.s_saucerScores[playerShots];
-
-            CheckForBonusLife(scoreBefore);
+            IncrementScoreBy(OriginalDataFrom1978.s_saucerScores[playerShots]);
 
             ++saucerKills;
+        }
+
+        /// <summary>
+        /// Adds to the score whilst ensuring at 1500 the player gets an extra life.
+        /// </summary>
+        /// <param name="amount"></param>
+        private void IncrementScoreBy(int amount)
+        {
+            int scoreBefore = score;
+            
+            score += amount;
+            
+            CheckForBonusLife(scoreBefore);
         }
 
         /// <summary>
@@ -190,26 +237,7 @@ namespace SpaceInvadersCore.Game
         {
             if (invaderRow < 0 || invaderRow > 5) throw new ArgumentOutOfRangeException(nameof(invaderRow), "5 invader rows, 0..4");
 
-            int scoreBefore = score;
-
-            switch (invaderRow)
-            {
-                case 4: // top level
-                    score += c_invaderPointsRow0;
-                    break;
-
-                case 3:
-                case 2:
-                    score += c_invaderPointsRow1and2;
-                    break;
-
-                case 1:
-                case 0: // bottom level
-                    score += c_invaderPointsRow3and4;
-                    break;
-            }
-
-            CheckForBonusLife(scoreBefore);
+            IncrementScoreBy(invaderPoints[invaderRow]);
 
             ++invaderKills;
         }

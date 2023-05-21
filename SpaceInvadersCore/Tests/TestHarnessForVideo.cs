@@ -86,6 +86,18 @@ namespace SpaceInvadersCore.Tests
                 video.DrawVerticalLine(Color.Cyan, x);
             }
 
+            CheckSetGetPixel(video, Color.Red);
+            CheckSetGetPixel(video, Color.Blue);
+            CheckSetGetPixel(video, Color.Green);
+
+
+            for (int y = 0; y < 224; y++)
+            {
+                video.SetPixel(Color.Red, new Point(y, y));
+                video.SetPixel(Color.Green, new Point(224 - y, y));
+                video.SetPixel(Color.Blue, new Point(y, 200));
+            }
+
             // this line wrapped like this.
             //  █████████████...
             // █
@@ -96,6 +108,16 @@ namespace SpaceInvadersCore.Tests
             // image as rendered
             b.Save(@"c:\temp\rectangle.png", ImageFormat.Png);
             return b;
+        }
+
+        private static void CheckSetGetPixel(VideoDisplay video, Color colour)
+        {
+            video.SetPixel(colour, new Point(0, 0));
+            Color pixel = video.GetPixel(new Point(0, 0));
+            if (pixel.R != colour.R && pixel.G != colour.G && pixel.B != colour.B)
+            {
+                throw new Exception("GetPixel failed");
+            }
         }
     }
 

@@ -1,4 +1,8 @@
-﻿using SpaceInvadersCore.Game.Player;
+﻿#define DrawShieldsIn252
+//#define RadarREMOVAL
+//#define PaintRadarNONSHIELD
+//#define PaintRadarSHIELD
+using SpaceInvadersCore.Game.Player;
 using SpaceInvadersCore;
 using SpaceInvadersCore.Game.SpaceInvaders;
 using System.Diagnostics;
@@ -71,6 +75,12 @@ public class GameController
     /// When set to true, the game will exit when the level is complete rather than continuing to the next level.
     /// </summary>
     private readonly bool exitAtEndOfLevel = false;
+
+    /// <summary>
+    /// Accelerate learning by ending game if a life lost. 
+    /// Useful if goal is infinity score.
+    /// </summary>
+    private readonly bool endGameIfSingleLifeLost = false;
     #endregion
 
     #region INTERNAL PROPERTIES
@@ -111,7 +121,7 @@ public class GameController
     {
         get
         {
-            return gameState.Lives == 0 || gameState.GameOver || scoreboard.Score > 9999; // artificial cap, in case AI hits the MAX displayable.
+            return gameState.Lives == 0 || gameState.GameOver;
         }
     }
 
@@ -241,6 +251,20 @@ public class GameController
     public void AISetScore(int score)
     {
         scoreboard.AISetScore(score);
+        
+        ShotsMadeByPlayer = 0;
+        saucer = null;
+        saucerCounterUpToAppearance = 0;
+        scoreboard.AdditionalLifeDue = false;
+        radarPoints.Clear();
+
+        // draw the level where player 2 score would be, otherwise one would never know what level it is currently on.
+        string levelLabel = $"LEVEL {gameState.Level}";
+
+        videoScreen.FillRectangle(Color.Black, new Rectangle(216 - 8 - levelLabel.Length * 8, 24, levelLabel.Length*8, 8));
+
+        // we write these to the screen once for performance reasons. Just to show off, we do so using our video display code not onto a Bitmap.
+        videoScreen.DrawString(levelLabel.ToUpper().Replace("/", "-"), new Point(216 - 8 - levelLabel.Length * 8, 24)); // alphanumeric sprites are 8px wide
     }
     #endregion
 
@@ -249,12 +273,13 @@ public class GameController
     /// Constructor.
     /// </summary>
 #pragma warning disable CS8618 // Player is initialised in InitialiseLevel, which is called from the constructor. This is a false positive.
-    public GameController(VideoDisplay screen, int highScore, bool playingWithShields = true, bool oneLevelOnly = false, int startLevel = 1)
+    public GameController(VideoDisplay screen, int highScore, bool playingWithShields = true, bool oneLevelOnly = false, int startLevel = 1, bool endIfSingleLifeLost = false)
 #pragma warning restore CS8618 // Player is initialised in InitialiseLevel, which is called from the constructor. This is a false positive
     {
         videoScreen = screen;
         drawShields = playingWithShields;
         exitAtEndOfLevel = oneLevelOnly;
+        endGameIfSingleLifeLost = endIfSingleLifeLost;
 
         InitialiseVideoScreen();
 
@@ -311,6 +336,14 @@ public class GameController
     }
 
     /// <summary>
+    /// Enables the AIPlayController to write the game over message to the screen.
+    /// </summary>
+    public void WriteGameOverToVideoScreen()
+    {
+        videoScreen.DrawString("GAME OVER", new Point(76, 50));
+    }
+
+    /// <summary>
     /// User is holding left arrow button.
     /// </summary>
     public void SetPlayerMoveDirectionToLeft()
@@ -341,7 +374,7 @@ public class GameController
     {
         if (playerShip is null)
             return;
-        
+
         playerShip.XDirection = 0;
     }
 
@@ -377,7 +410,7 @@ public class GameController
     /// Returns an array for the neural network, containing the game object state.
     /// </summary>
     /// <returns></returns>
-    public List<double> AIGetObjectArray()
+    public double[] AIGetObjectArray()
     {
         if (spaceInvaderController is null) throw new Exception("spaceInvaderController is null - something has broken in the initialisation");
 
@@ -449,7 +482,7 @@ public class GameController
             data.Add(1); // there is no barrier in front of the player
         }
 
-        return data;
+        return data.ToArray();
     }
     #endregion
 
@@ -480,14 +513,14 @@ public class GameController
     {
         currentFrame = 0;
         saucerCounterUpToAppearance = 0;
-        
+
         CancelMove();
 
         // when we start a new level, a player will already be on screen, so we need to erase it.
         if (Level != 1) playerShip?.EraseSprite();
 
         playerShip = new(videoScreen);
-        
+
         // no saucer at start.
         saucer = null; // saucer appearance is seemingly going to appear random, but not yet.
 
@@ -533,10 +566,20 @@ public class GameController
         //
         //       |              |               |              |
         //       32             77             122            167    
-        videoScreen.DrawSprite(OriginalSpritesFrom1978.Sprites["Shield"], 32, topYofShields);
-        videoScreen.DrawSprite(OriginalSpritesFrom1978.Sprites["Shield"], 77, topYofShields);
-        videoScreen.DrawSprite(OriginalSpritesFrom1978.Sprites["Shield"], 122, topYofShields);
-        videoScreen.DrawSprite(OriginalSpritesFrom1978.Sprites["Shield"], 167, topYofShields);
+
+        Sprite shield = OriginalSpritesFrom1978.Sprites["Shield"];
+
+#if DrawShieldsIn252
+        videoScreen.DrawShield(shield, 32, topYofShields);
+        videoScreen.DrawShield(shield, 77, topYofShields);
+        videoScreen.DrawShield(shield, 122, topYofShields);
+        videoScreen.DrawShield(shield, 167, topYofShields);
+#else
+        videoScreen.DrawSprite(shield, 32, topYofShields);
+        videoScreen.DrawSprite(shield, 77, topYofShields);
+        videoScreen.DrawSprite(shield, 122, topYofShields);
+        videoScreen.DrawSprite(shield, 167, topYofShields);
+#endif
     }
 
     /// <summary>
@@ -683,6 +726,11 @@ public class GameController
         --gameState.Lives;
 
         // the game state controller will display lives remaining
+        if (endGameIfSingleLifeLost)
+        {
+            //Debug.WriteLine(" exiting game, because player lost a life.");
+            gameState.GameOver = true;
+        }
     }
 
     /// <summary>
@@ -896,27 +944,122 @@ public class GameController
         return videoScreen.VideoShrunkForAI();
     }
 
+    List<Point> radarPoints = new();
+
     /// <summary>
-    /// A radar array is a 1D array of 50 values, each value is the distance to the nearest object in that direction.
+    /// This returns 51 data points via two radars + invader speed and direction indicator.
+    /// Radar 1: Sweep 45 different angles from -85 to +85, each value in the array corresponding to the distance to the nearest 
+    ///          invader/saucer in that direction. This radar penetrates shields and ignores them. Important to note, that bullets
+    ///          appear on the radar (player and invader).
+    /// Radar 2: Sweep 5 different angles from -15 +15, each value in the array corresponding to the distance to the nearest 
+    ///          shield in that direction. This is a short radar that only sees shields.
+    ///          Also note, it doesn't tell the AI of all the other shields, this is a defensive, am I protected or not sensor.
+    /// 
+    /// Humans know the shields are useful to hide between. With a simple radar that doesn't distinguish, how is it meant to know
+    /// whether to shoot or hide behind? What you force the AI to do is destroy the shields just in case it's an invader. 
+    /// 
+    /// The thing about is a shield is that knowing it was there, is not an indicator of it having not been blown to smithereens since.
+    /// In fact the AI has no concept of past, current, future it works in here and now. This radar thus informs of when there is shield
+    /// not destroyed that covers the size of the player ship (i.e. bullet cannot hit).
     /// </summary>
     /// <returns></returns>
     public double[] AIGetRadarArray()
     {
-        int samplePoints = 50;
+#if RadarREMOVAL
+        foreach (Point p in radarPoints)
+        {
+            if (ColorEquals(videoScreen.GetPixel(p), Color.Blue)) videoScreen.SetPixel(Color.FromArgb(255, 0, 0, 0), p);
+        }
 
-        double[] LIDAROutput = new double[samplePoints];
+        radarPoints.Clear();
+#endif
 
-        float LIDARAngleToCheckInDegrees = -60; 
+        double[] RADAROutput = new double[45+15+1];
 
-        float LIDARVisionAngleInDegrees = 2*(-LIDARAngleToCheckInDegrees)/samplePoints;
+        if (currentFrame == 0) return RADAROutput;
 
-        int searchDistanceInPixels = 200;
+        int samplePoints = 45;
 
-        for (int LIDARAngleIndex = 0; LIDARAngleIndex < samplePoints; LIDARAngleIndex++)
+        float RADARAngleToCheckInDegrees = -85;
+
+        float RADARVisionAngleInDegrees = 2 * (-RADARAngleToCheckInDegrees) / (samplePoints - 1);
+
+        int searchDistanceInPixels = 180;
+
+        for (int RADARAngleIndex = 0; RADARAngleIndex < samplePoints; RADARAngleIndex++)
         {
             //     -45  0  45
             //  -90 _ \ | / _ 90   <-- relative to direction of player. 0 = right, 90 = up, so we adjust for
-            double LIDARAngleToCheckInRadians = DegreesInRadians(90 + LIDARAngleToCheckInDegrees);
+            double RADAARAngleToCheckInRadians = DegreesInRadians(90 + RADARAngleToCheckInDegrees);
+
+            // calculate ONCE per angle, not per radius.
+            double cos = Math.Cos(RADAARAngleToCheckInRadians);
+            double sin = Math.Sin(RADAARAngleToCheckInRadians);
+
+            float distanceToAlien = 0;
+
+            for (int currentRADARScanningDistanceRadius = 7;
+                     currentRADARScanningDistanceRadius < searchDistanceInPixels;
+                     currentRADARScanningDistanceRadius += 4) // no need to check at 1 pixel resolution
+            {
+                double positionBeingScannedX = Math.Round(cos * currentRADARScanningDistanceRadius);
+                double positionBeingScannedY = Math.Round(sin * currentRADARScanningDistanceRadius);
+
+                // y has to be negated because the screen is upside down. Cartesian (0,0) is bottom left, our back-buffer is Bitmap aligned (0,0) is top left.
+                // sweep is intentionally left to right.
+                Point p = new(playerShip.Position.X - (int)positionBeingScannedX, playerShip.Position.Y - (int)positionBeingScannedY);
+
+                if (p.X < 0 || p.X > 224 || p.Y < 32) break; // off screen, no need to check the radar further
+
+                Color pixel = videoScreen.GetPixel(p);
+
+                // do we see invader / saucer on that pixel?
+                if (pixel.A == 255 && pixel.G != 0) // true of invader (white) or saucer (magenta) shields (green, alpha 252).
+                {
+                    distanceToAlien = currentRADARScanningDistanceRadius;
+                    break; // we've found the closest pixel in this direction
+                }
+                else
+                {
+#if PaintRadarNONSHIELD
+                    // don't draw debug rays on top of shields. This RADAR penetrates them.
+                    if (pixel.A > 250)
+                    {
+                        // DEBUG: enable this to see the radar
+                        videoScreen.SetPixel(Color.Blue, p);
+                        radarPoints.Add(p);
+                    }
+#endif
+                }
+            }
+
+            if (distanceToAlien > 0)
+            {
+                RADAROutput[RADARAngleIndex] = 1 - (distanceToAlien / searchDistanceInPixels);
+            }
+            else
+            {
+                RADAROutput[RADARAngleIndex] = 0;
+            }
+
+            // move to next radar angle sweep
+            RADARAngleToCheckInDegrees += RADARVisionAngleInDegrees;
+        }
+
+        // --- SHIELD DETECTOR ---
+
+        samplePoints = 15;
+        RADARAngleToCheckInDegrees = -65;
+
+        RADARVisionAngleInDegrees = 2 * (-RADARAngleToCheckInDegrees) / (samplePoints - 1);
+
+        searchDistanceInPixels = 50;
+
+        for (int RADARAngleIndex = 0; RADARAngleIndex < samplePoints; RADARAngleIndex++)
+        {
+            //     -45  0  45
+            //  -90 _ \ | / _ 90   <-- relative to direction of player. 0 = right, 90 = up, so we adjust for
+            double LIDARAngleToCheckInRadians = DegreesInRadians(90 + RADARAngleToCheckInDegrees);
 
             // calculate ONCE per angle, not per radius.
             double cos = Math.Cos(LIDARAngleToCheckInRadians);
@@ -924,47 +1067,59 @@ public class GameController
 
             float distanceToAlien = 0;
 
-            for (int currentLIDARScanningDistanceRadius = 5;
-                     currentLIDARScanningDistanceRadius < searchDistanceInPixels;
-                     currentLIDARScanningDistanceRadius += 4) // no need to check at 1 pixel resolution
+            for (int currentRADARScanningDistanceRadius = 8; // just below the bottom part of the base (8px up fron ship)
+                     currentRADARScanningDistanceRadius < searchDistanceInPixels;
+                     currentRADARScanningDistanceRadius += 4) // no need to check at 1 pixel resolution
             {
-                double positionBeingScannedX = Math.Round(cos * currentLIDARScanningDistanceRadius);
-                double positionBeingScannedY = Math.Round(sin * currentLIDARScanningDistanceRadius);
+                double positionBeingScannedX = Math.Round(cos * currentRADARScanningDistanceRadius);
+                double positionBeingScannedY = Math.Round(sin * currentRADARScanningDistanceRadius);
 
-                // y has to be negated because the screen is upside down. Cartesian (0,) is bottom left, our back-buffer is Bitmap aligned (0,0) is top left.
+                // y has to be negated because the screen is upside down. Cartesian (0,0) is bottom left, our back-buffer is Bitmap aligned (0,0) is top left.
+                // sweep is intentionally left to right.
                 Point p = new(playerShip.Position.X - (int)positionBeingScannedX, playerShip.Position.Y - (int)positionBeingScannedY);
 
                 if (p.X < 0 || p.X > 224 || p.Y < 32) break; // off screen
 
-                // do we see invader / saucer on that pixel?
-                if (videoScreen.GetPixel(p).G == 255) // true of invader (white) or saucer (magenta) shields (green).
+                // do we see shield at the pixel?
+                if (videoScreen.GetPixel(p).A <= 252)
                 {
-                    distanceToAlien = currentLIDARScanningDistanceRadius;
+                    distanceToAlien = currentRADARScanningDistanceRadius;
                     break; // we've found the closest pixel in this direction
                 }
+                else
+                {
+#if PaintRadarSHIELD
+                    // DEBUG: enable this to see the radar
+                    videoScreen.SetPixel(Color.Blue, p);
 
-                // DEBUG: enable this to see the radar rays
-                // videoScreen.SetPixel(Color.Blue, p);
+                    //Bitmap b = videoScreen.GetVideoDisplayContent();
+                    //b.Save(@"c:\temp\shield.png");
+
+                    radarPoints.Add(p);
+#endif
+                }
             }
 
             if (distanceToAlien > 0)
-            {
-                distanceToAlien  /= searchDistanceInPixels;
-                
-                LIDAROutput[LIDARAngleIndex] = 1 - distanceToAlien;
+            {               
+                RADAROutput[45 + RADARAngleIndex] = 1 - (distanceToAlien / searchDistanceInPixels);
             }
             else
             {
-                LIDAROutput[LIDARAngleIndex] = 0;
+                RADAROutput[45 + RADARAngleIndex] = 0;
             }
 
-            LIDARAngleToCheckInDegrees += LIDARVisionAngleInDegrees;
+            RADARAngleToCheckInDegrees += RADARVisionAngleInDegrees;
         }
 
-        // an array of float values 0..1 indicating "1" something is really close in that direction to "0" nothing.
-        return LIDAROutput;
+        // RADAR tells you where things are, but from a firing perspective, it's helpful to know that they are moving and in which direction
+        // given for any left->right or vice versa, speed is constant we provide it here.
+        RADAROutput[45+15] = spaceInvaderController.DirectionAndSpeedOfInvaders/3;
+
+        // an array of float values mostly 0..1 indicating "1" something is really close in that direction to "0" nothing, the last float -1..1 indicating relative speed and direction
+        return RADAROutput;
     }
-   
+
     /// <summary>
     /// Logic requires radians but we track angles in degrees, this converts.
     /// </summary>
@@ -972,10 +1127,19 @@ public class GameController
     /// <returns></returns>
     public static double DegreesInRadians(double angle)
     {
-        // if (angle < 0 || angle > 360) Debugger.Break();
-
         return (double)Math.PI * angle / 180;
     }
 
-    #endregion
+    /// <summary>
+    /// Compare two Color objects for equality, because Color.Equals() is not implemented in a logical way.
+    /// This matches ARGB. It does not consider "Name".
+    /// </summary>
+    /// <param name="colour1"></param>
+    /// <param name="colour2"></param>
+    /// <returns></returns>
+    public static bool ColorEquals(Color colour1, Color colour2)
+    {
+        return colour1.A == colour2.A && colour1.R == colour2.R && colour1.G == colour2.G && colour1.B == colour2.B;
+    }
+#endregion
 }
