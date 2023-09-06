@@ -31,12 +31,28 @@ internal class Visualiser
     /// <summary>
     /// Indicates whether visualisations are enabled. If false, no visualisations are rendered.
     /// </summary>
-    internal static bool s_visualisationsEnabled = false;
+    private static bool s_visualisationsEnabled = false;
 
     /// <summary>
-    /// Where connections can attached to the cell perimeter?
+    /// Getter for s_visualisationsEnabled.
     /// </summary>
-    private readonly HashSet<Point> attachedPoints = new();
+    internal static bool VisualisationsEnabled => s_visualisationsEnabled;
+
+    /// <summary>
+    /// Disables visualisations.
+    /// </summary>
+    internal static void DisableVisualisations()
+    {
+        s_visualisationsEnabled = false;
+    }
+
+    /// <summary>
+    /// Enables visualisations
+    /// </summary>
+    internal static void EnableVisualisations()
+    {
+        s_visualisationsEnabled = true;
+    }
 
     /// <summary>
     /// Custom line cap for drawing the arrow between brain cells.
@@ -130,7 +146,7 @@ internal class Visualiser
 
         foreach (NeuralNetwork n in brainToVisualise.Networks.Values)
         {
-            foreach (OUTPUTCell output in n.Outputs.Values)
+            foreach (OutputCell output in n.Outputs.Values)
             {
                 RecursivelyWorkOutNodesAndConnectionsToDrawLater(graphics, output, ref idsProcessed, ref cellsToDraw, ref linksToDraw, depth);
             }
@@ -307,7 +323,7 @@ internal class Visualiser
         GraphicsState graphicsState = graphics.Save();
 
         double angle = Math.Atan(endPoint.X - startPoint.X == 0 ? 0 : (endPoint.Y - startPoint.Y) / (float)(endPoint.X - startPoint.X));
-        graphics.TranslateTransform((startPoint.X + endPoint.X) / 2, (startPoint.Y + endPoint.Y) / 2);
+        graphics.TranslateTransform(((float)startPoint.X + (float)endPoint.X) / 2, ((float)startPoint.Y + (float)endPoint.Y) / 2);
         graphics.RotateTransform((float)(180 / Math.PI * angle));
         graphics.DrawString(label, s_fontForVisualisation, Brushes.Red, new PointF(0, 0));
 
@@ -360,7 +376,7 @@ internal class Visualiser
         double closestEndDistanceOfLineFromCircleCenter = int.MaxValue; // we haven't found a point on the circumference close to end
 
         // around the circle in 18 degree steps
-        for (double radians = 0; radians < 2 * Math.PI; radians += (double)(2 * Math.PI / pointsOnCircumference))
+        for (double radians = 0; radians < 2 * Math.PI; radians += (2 * Math.PI / pointsOnCircumference))
         {
             // determine a point on the circumference based on 18 degree step
             int xPointOnCircumference = (int)(Math.Cos(radians) * VisualiserOutputCell.DiameterOfCirclePX / 2 + locationStartInCenterOfCircle.X); // on circumference of start circle
@@ -380,13 +396,11 @@ internal class Visualiser
             }
         }
 
-        for (double radians = 0; radians < 2 * Math.PI; radians += (double)(2 * Math.PI / pointsOnCircumference))
+        for (double radians = 0; radians < 2 * Math.PI; radians += (2 * Math.PI / pointsOnCircumference))
         {
             // determine a point on the circumference based on 18 degree step
             int xPointOnCircumference = (int)(Math.Cos(radians) * VisualiserOutputCell.DiameterOfCirclePX / 2 + locationEndInCenterOfCircle.X); // on circumference of end circle
             int yPointOnCircumference = (int)(Math.Sin(radians) * VisualiserOutputCell.DiameterOfCirclePX / 2 + locationEndInCenterOfCircle.Y);
-
-            //if (attachedPoints.Contains(new Point(xPointOnCircumference, yPointOnCircumference))) continue;
 
             // how far is the point from the start point
             double distanceBetweenPoints = Utils.DistanceBetweenTwoPoints(new PointF(xPointOnCircumference, yPointOnCircumference), locationStartInCenterOfCircle);
@@ -399,9 +413,6 @@ internal class Visualiser
                 endPointForLineArrowIsDrawn = new Point(xPointOnCircumference, yPointOnCircumference);
             }
         }
-
-        //attachedPoints.Add(startPointForLine);
-        //attachedPoints.Add(endPointForLineArrowIsDrawn);
     }
 
     /// <summary>

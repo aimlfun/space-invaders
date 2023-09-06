@@ -35,16 +35,11 @@ internal static class SpaceInvader
     /// <summary>
     /// Dimensions of our space invader.
     /// </summary>
-    internal static Size Dimensions = new()
+    internal readonly static Size Dimensions = new()
     {
         Width = 16,
         Height = 8
     };
-
-    /// <summary>
-    /// Debugging.
-    /// </summary>
-    private const bool c_showHitBox = false;
 
     /// <summary>
     /// We detect collision on the bullet, then apply this to determine which Space Invader was hit.
@@ -60,7 +55,7 @@ internal static class SpaceInvader
         int widthAdjustment = ((row != 0) ? -1 : 0) + ((row == 4) ? -3 : 0);
 
         // invader on top row is 8x8, next 2 rows  is 11x8 ..next 2 rows 12x8, so we need to adjust the hitbox
-        return new Rectangle(X + 2 + xAdjustment - 1 - 2, Y, Dimensions.Width - 4 + widthAdjustment + 1 + 4, Dimensions.Height);
+        return new Rectangle(X + xAdjustment - 1, Y, Dimensions.Width + widthAdjustment + 1, Dimensions.Height);
     }
 
     /// <summary>
@@ -75,9 +70,7 @@ internal static class SpaceInvader
     {
         GetPosition(referenceAlienPosition, invaderNumber, out int row, out _, out int X, out int Y);
 
-#pragma warning disable CS0162 // Unreachable code detected
-        if (c_showHitBox) videoScreen.DrawRectangle(Color.Blue, HitBox(invaderNumber, referenceAlienPosition));
-#pragma warning restore CS0162 // Unreachable code detected
+        if (DebugSettings.c_debugSpaceInvaderDrawHitBox) videoScreen.DrawRectangle(Color.Blue, HitBox(invaderNumber, referenceAlienPosition));
 
         switch (state)
         {
@@ -143,7 +136,7 @@ internal static class SpaceInvader
                          █    █     
                 
                  */
-                videoScreen.DrawSprite(OriginalSpritesFrom1978.Sprites[OriginalDataFrom1978.s_spaceInvaderImageFramesIndexedByRow[row][frame]], X, Y);
+                videoScreen.DrawSprite(OriginalSpritesFrom1978.Get(OriginalDataFrom1978.s_spaceInvaderImageFramesIndexedByRow[row][frame]), X, Y);
                 break;
 
             case InvaderState.exploding:
@@ -157,11 +150,11 @@ internal static class SpaceInvader
                        █  █ █  █    
                       █  █   █  █                        
                  */
-                videoScreen.DrawSprite(OriginalSpritesFrom1978.Sprites["AlienExplode"], X, Y);
+                videoScreen.DrawSprite(OriginalSpritesFrom1978.Get("AlienExplode"), X, Y);
                 break;
 
             case InvaderState.dead:
-                throw new Exception("why paint dead invaders?");
+                throw new ApplicationException("why paint dead invaders?");
         }
     }
 
@@ -183,7 +176,7 @@ internal static class SpaceInvader
                  GetAlienCoords:
                 ; Convert alien index in L to screen bit position in C,L.
                 ; Return alien row index (converts to type) in D.
-                ;
+                
                 017A: 16 00           LD      D,$00               ; Row 0
                 017C: 7D              LD      A,L                 ; Hold onto alien index 
                 017D: 21 09 20        LD      HL,$2009            ; Get alien X ...
@@ -253,22 +246,20 @@ internal static class SpaceInvader
     {
         GetPosition(referenceAlienPosition, invaderNumber, out int row, out _, out int X, out int Y);
 
-#pragma warning disable CS0162 // Unreachable code detected
-        if (c_showHitBox) videoScreen.DrawRectangle(Color.Black, HitBox(invaderNumber, referenceAlienPosition));
-#pragma warning restore CS0162 // Unreachable code detected
+        if (DebugSettings.c_debugSpaceInvaderDrawHitBox) videoScreen.DrawRectangle(Color.Black, HitBox(invaderNumber, referenceAlienPosition));
 
         switch (state)
         {
             case InvaderState.alive:
-                videoScreen.EraseSprite(OriginalSpritesFrom1978.Sprites[OriginalDataFrom1978.s_spaceInvaderImageFramesIndexedByRow[row][1-frame]], X, Y);
+                videoScreen.EraseSprite(OriginalSpritesFrom1978.Get(OriginalDataFrom1978.s_spaceInvaderImageFramesIndexedByRow[row][1 - frame]), X, Y);
                 break;
 
             case InvaderState.exploding:
-                videoScreen.EraseSprite(OriginalSpritesFrom1978.Sprites["AlienExplode"], X, Y);
+                videoScreen.EraseSprite(OriginalSpritesFrom1978.Get("AlienExplode"), X, Y);
                 break;
 
             case InvaderState.dead:
-                throw new Exception("why paint dead invaders?");
+                throw new ApplicationException("why paint dead invaders?");
         }
     }
 }

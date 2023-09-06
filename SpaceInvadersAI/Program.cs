@@ -24,8 +24,8 @@ namespace SpaceInvadersAI
             //  █   █   █       █   █   █   █   █                 █     █   █    █ █    █   █   █   █   █       █  █    █   █           █   █     █
             //   ███    █       █   █    ███    █████            ███    █   █     █     █   █   ████    █████   █   █    ███            █   █    ███
 
-            //TestHarnessForBrainSerialisation.PerformTest();
-            //TestHarnessForVideo.PerformTest();
+            // TestHarnessForBrainSerialisation.PerformTest();
+            // TestHarnessForVideo.PerformTest();
             
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.

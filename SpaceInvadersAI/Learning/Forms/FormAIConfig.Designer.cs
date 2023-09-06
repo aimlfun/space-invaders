@@ -2214,7 +2214,7 @@
             // numericUpDownConcurrentGames
             // 
             numericUpDownConcurrentGames.Location = new Point(308, 3);
-            numericUpDownConcurrentGames.Maximum = new decimal(new int[] { 200, 0, 0, 0 });
+            numericUpDownConcurrentGames.Maximum = new decimal(new int[] { 500, 0, 0, 0 });
             numericUpDownConcurrentGames.Minimum = new decimal(new int[] { 5, 0, 0, 0 });
             numericUpDownConcurrentGames.Name = "numericUpDownConcurrentGames";
             numericUpDownConcurrentGames.Size = new Size(75, 23);

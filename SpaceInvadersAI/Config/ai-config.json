@@ -1,0 +1,108 @@
+{
+  "Mode": 1,
+  "BrainTemplates": {
+    "0": {
+      "StartingScore": 0,
+      "LevelRule": "1",
+      "BrainTemplateFileName": ".\\Templates\\internalData action lvl=1 s=1140 ik=55 sk=1.ai"
+    },
+    "1": {
+      "StartingScore": 990,
+      "LevelRule": "2",
+      "BrainTemplateFileName": ".\\Templates\\internalData action lvl=2 s=2130 ik=55 sk=0.ai"
+    },
+    "2": {
+      "StartingScore": 2080,
+      "LevelRule": "3",
+      "BrainTemplateFileName": ".\\Templates\\internalData action lvl=3 s=3220 ik=55 sk=1.ai"
+    },
+    "3": {
+      "StartingScore": 3120,
+      "LevelRule": "4",
+      "BrainTemplateFileName": ".\\Templates\\internalData action lvl=4 s=4460 ik=55 sk=2.ai"
+    },
+    "4": {
+      "StartingScore": 4210,
+      "LevelRule": "5,6,\u002B6,\u002B1,\u002B1,...",
+      "BrainTemplateFileName": ".\\Templates\\internalData action lvl=5 s=5550 ik=55 sk=1.ai"
+    },
+    "5": {
+      "StartingScore": 5100,
+      "LevelRule": "7,\u002B1,\u002B1,\u002B6,...",
+      "BrainTemplateFileName": ".\\Templates\\internalData action lvl=7 s=7630 ik=55 sk=0.ai"
+    },
+    "6": {
+      "StartingScore": 6930,
+      "LevelRule": "10,\u002B8,...",
+      "BrainTemplateFileName": ".\\Templates\\internalData action lvl=10 s=10580 ik=55 sk=0.ai"
+    },
+    "7": {
+      "StartingScore": 8020,
+      "LevelRule": "11,\u002B8,...",
+      "BrainTemplateFileName": ".\\Templates\\internalData action lvl=11 s=11570 ik=55 sk=0.ai"
+    },
+    "8": {
+      "StartingScore": 0,
+      "LevelRule": "",
+      "BrainTemplateFileName": ""
+    },
+    "9": {
+      "StartingScore": 0,
+      "LevelRule": "",
+      "BrainTemplateFileName": ""
+    }
+  },
+  "UseActionFireApproach": true,
+  "AIHiddenLayers": [
+    0,
+    0,
+    0
+  ],
+  "MovesBeforeMutation": 400000,
+  "SelectionType": 0,
+  "CreatingARandomNetwork": true,
+  "ConcurrentGames": 100,
+  "DesiredRandomNeurons": 3,
+  "MinimumNumberOfNeurons": 3,
+  "MaximumNumberOfNeurons": 99,
+  "PercentOfBrainsToCreateAsNewRandomDuringMutation": 40,
+  "PercentOfBrainsToCreateFromTemplate": 0,
+  "PercentOfBrainsPreservedDuringMutation": 30,
+  "NumberOfTimesASingleBrainIsMutatedInOneGeneration": 3,
+  "PercentChanceABrainIsPickedForMutation": 50,
+  "PercentageOfDeadScoreThreshold": 0.9,
+  "AIPlaysWithShields": true,
+  "AIOneLevelOnly": false,
+  "AIStartLevel": 1,
+  "AIStartScore": 0,
+  "AllowedActivationFunctions": [
+    17,
+    18,
+    24
+  ],
+  "AllowedMutationMethods": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11
+  ],
+  "CellTypeRatios": {
+    "PERCEPTRON": 100,
+    "AND": 100,
+    "TRANSISTOR": 100,
+    "IF": 100,
+    "MAX": 50,
+    "MIN": 50
+  },
+  "Template": "",
+  "InputToAI": 1,
+  "EndGameIfLifeLost": true
+}

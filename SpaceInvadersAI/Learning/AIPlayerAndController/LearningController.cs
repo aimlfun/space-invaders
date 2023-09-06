@@ -7,6 +7,7 @@ using SpaceInvadersAI.Learning.Configuration;
 using System.Diagnostics;
 using SpaceInvadersAI.Graphing;
 using Microsoft.VisualBasic.Logging;
+using SpaceInvadersCore.Game.AISupport;
 
 namespace SpaceInvadersAI.Learning.AIPlayerAndController
 {
@@ -221,7 +222,7 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
         /// </summary>
         internal static void SetQuickLearningMode(bool quickLearnMode)
         {
-            if (workerForQuickLearningMode is null) throw new Exception("Worker for quick learning mode is null");
+            if (workerForQuickLearningMode is null) throw new ApplicationException("Worker for quick learning mode is null");
 
             if (quickLearnMode)
             {
@@ -304,7 +305,7 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
                     inputs = new();
 
                     // indicator for each of alive or dead
-                    for (int pixelIndex = 0; pixelIndex < 56 * 64; pixelIndex++)
+                    for (int pixelIndex = 0; pixelIndex < 56 * (64-16); pixelIndex++)
                     {
                         inputs.Add($"{pixelIndex}");
                     }
@@ -315,12 +316,12 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
                     inputs = new();
 
                     // distance indicator
-                    for (int radarIndex = 0; radarIndex < 45; radarIndex++)
+                    for (int radarIndex = 0; radarIndex < Radar.c_mainRadarSamplePoints; radarIndex++)
                     {
                         inputs.Add($"invader-radar-{radarIndex}");
                     }
 
-                    for (int radarIndex = 0; radarIndex < 15; radarIndex++)
+                    for (int radarIndex = 0; radarIndex < Radar.c_shieldRadarSamplePoints; radarIndex++)
                     {
                         inputs.Add($"shield-radar-{radarIndex}");
                     }
@@ -329,7 +330,7 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
                     inputs.Add($"alien-x-direction");
                     break;
 
-                default: throw new Exception("Unknown AI input mode");
+                default: throw new ApplicationException("Unknown AI input mode");
             }
 
             inputParameters = inputs.ToArray();
@@ -359,7 +360,7 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
         /// <param name="e"></param>
         private static void WorkerForQuickLearningMode_DoWork(object? sender, DoWorkEventArgs e)
         {
-            if (sender is null || sender is not BackgroundWorker) throw new Exception("sender is null or not a BackgroundWorker");
+            if (sender == null || sender is not BackgroundWorker) throw new ApplicationException("sender is null or not a BackgroundWorker");
 
             BackgroundWorker bw = (BackgroundWorker)sender;
 
@@ -405,7 +406,7 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
         /// </summary>
         internal static void CreateVisualisation()
         {
-            Visualiser.s_visualisationsEnabled = true;
+            Visualiser.EnableVisualisations();
         }
 
         /// <summary>
@@ -575,7 +576,7 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
             s_players.Add(newPlayer.brainControllingPlayerShip.Id, newPlayer);
             
             // WARNING: score has to be zeroed if trained on zeroed OR set to the last score at the end of the level before
-            newPlayer.gameController.AISetScore(PersistentConfig.Settings.AIStartScore);
+            newPlayer.gameController.AISetScore(PersistentConfig.Settings.AIStartScore, false);
         }
 
         /// <summary>

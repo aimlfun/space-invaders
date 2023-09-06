@@ -60,7 +60,7 @@ internal class BaseCell : IDisposable
     {
         get
         {
-            return (Type.ToString() + "~" + Bias.ToString() + "~" + CellActivationThreshold.ToString() + "~" + string.Join("~",InboundConnections)+"~"+ string.Join("~", OutboundConnections) + "~" + ActivationFunction.ToString()).GetHashCode();
+            return (Type.ToString() + "~" + Bias.ToString() + "~" + CellActivationThreshold.ToString() + "~" + string.Join("~", InboundConnections) + "~" + string.Join("~", OutboundConnections) + "~" + ActivationFunction.ToString()).GetHashCode();
         }
     }
 
@@ -125,7 +125,7 @@ internal class BaseCell : IDisposable
     /// This contains the activation function applied to the cell.
     /// </summary>
     internal ActivationFunction ActivationFunction;
- 
+
     /// <summary>
     /// Provides annotation for the cell, explaining what it is doing.
     /// </summary>
@@ -253,11 +253,11 @@ internal class BaseCell : IDisposable
         // if it is minimum, assign a random value (0..+/-1) to initialise the CellActivationThreshold
         if (CellActivationThreshold == int.MinValue)
         {
-            CellActivationThreshold = RandomNumberGenerator.GetInt32(-1000000, 1000000) / 1000000;
+            CellActivationThreshold = (double)RandomNumberGenerator.GetInt32(-1000000, 1000000) / 1000000f;
         }
 
         // if threshold is int.MinValue, assign a random value (0..+/-1/10th) to the threshold input
-        if (threshold == int.MinValue) threshold = RandomNumberGenerator.GetInt32(-1000000, 1000000) / 10000000; // 1/10th
+        if (threshold == int.MinValue) threshold = (float)RandomNumberGenerator.GetInt32(-1000000, 1000000) / 10000000f; // 1/10th
 
         // apply the delta to the CellActivationThreshold
         CellActivationThreshold += threshold;
@@ -269,7 +269,7 @@ internal class BaseCell : IDisposable
     /// <returns></returns>
     internal static ActivationFunction RandomActivationFunction(NeuralNetwork network)
     {
-        if (network.AllowedActivationFunctions is null) throw new ArgumentNullException(nameof(Network), "network cannot be null");
+        if (network.AllowedActivationFunctions is null) throw new ApplicationException("network functions cannot be null");
 
         return network.AllowedActivationFunctions[RandomNumberGenerator.GetInt32(0, network.AllowedActivationFunctions.Length)];
     }
@@ -323,7 +323,7 @@ internal class BaseCell : IDisposable
     /// <exception cref="ArgumentOutOfRangeException"></exception>
     internal NeuralNetwork ConnectTo(string toCellId, double weight = 1)
     {
-        if (Network is null) throw new Exception("network undefined for cell");
+        if (Network is null) throw new ApplicationException("network undefined for cell");
 
         BaseCell? cellTo = Network.Neurons[toCellId];
 
@@ -395,6 +395,8 @@ internal class BaseCell : IDisposable
     {
         double value = Bias;
 
+        Debug.Assert(Network.NeuronsAsArray is not null);
+
         // sum each input only if they are in range.
         for (int i = 0; i < InboundConnections.Count; i++)
         {
@@ -405,7 +407,7 @@ internal class BaseCell : IDisposable
 
         State = value;
     }
-#endregion
+    #endregion
 
     #region SERIALISATION
     /// <summary>

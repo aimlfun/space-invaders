@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using SpaceInvadersAI.Graphing;
+using SpaceInvadersCore;
 
 namespace SpaceInvadersAI.Learning;
 /// <summary>
@@ -45,13 +46,6 @@ internal class LearningFramework
     /// </summary>
     /// <param name="generation"></param>
     internal delegate void NotifyStartGame(int generation);
-
-    /// <summary>
-    /// Delegate for a function that returns the fitness of player #id.
-    /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
-    internal delegate float FitnessFunction(int id);
 
     /// <summary>
     /// Delegate for a function that creates a player.
@@ -194,6 +188,7 @@ internal class LearningFramework
 
     /// <summary>
     /// By default it logs to the console.
+    /// SonarQube complains about this, but it's a stub for unit testing and _is_ referenced in the constructor.
     /// </summary>
     /// <param name="text"></param>
     private void LogStub(string text)
@@ -219,18 +214,8 @@ internal class LearningFramework
     internal int Generation = 0;
 
     /// <summary>
-    /// Default list of cell types.
-    /// </summary>
-    internal static readonly CellType[] DefaultCellTypes = new CellType[] {
-                    CellType.PERCEPTRON, CellType.PERCEPTRON, CellType.PERCEPTRON, CellType.PERCEPTRON, CellType.PERCEPTRON, CellType.PERCEPTRON,
-                    CellType.PERCEPTRON, CellType.PERCEPTRON, CellType.PERCEPTRON, CellType.PERCEPTRON, CellType.PERCEPTRON, CellType.PERCEPTRON,
-                    CellType.TRANSISTOR, CellType.TRANSISTOR,
-                    CellType.AND, CellType.AND,
-                    CellType.MAX, CellType.MIN,
-                    CellType.IF, CellType.IF };
-
-    /// <summary>
     /// Default list of mutation methods.
+    /// SonarQube complains about this, but _is_ referenced in the constructor.
     /// </summary>
     internal static readonly MutationMethod[] DefaultMutationMethods = new MutationMethod[] {
                                                                              MutationMethod.ModifyActivationFunction, MutationMethod.ModifyBias,
@@ -243,7 +228,16 @@ internal class LearningFramework
     /// <summary>
     /// Used by the graph to know how much we've reduced the data points by to keep them in range.
     /// </summary>
-    internal static float GenerationMultiplier = 1;
+    private static float generationMultiplier = 1;
+
+    /// <summary>
+    /// 
+    /// </summary>
+    internal static float GenerationMultiplier
+    {
+        get { return generationMultiplier; }
+    }
+
 
     /// <summary>
     /// Used to set the logging function.
@@ -273,7 +267,8 @@ internal class LearningFramework
 
     /// <summary>
     /// Constructor. Creates the framework for the game.
-    /// TODO: It would be better in my view if the caller passed in an "object" containing the learning framework inputs (it validated), than do it as part of this constructor.
+    /// It would probably be better in my view if the caller passed in an "object" containing the learning framework inputs (it validated), than do it as part of this constructor.
+    /// SonarQube complains about this, because it does have rather a lot of inputs. At some point I may put the key inputs only in the constructor, and the rest in a "settings" object/setter/getter.
     /// </summary>
     /// <param name="inputParameterNames">The list of named inputs for the brain.</param>
     /// <param name="outputParameterNames">The list of named outputs for the brain.</param>
@@ -361,13 +356,16 @@ internal class LearningFramework
         cellTypesAllowedForMutation = cellTypeRatios;
         Selection = selectionType;
 
+        // the RADAR doesn't function unless the shields are drawn in alpha 252
+        DebugSettings.s_DrawShieldsIn252 = (Configuration.PersistentConfig.Settings.InputToAI == PersistentConfig.AIInputMode.radar);
+
         LogWriter.Invoke($"population size: {DesiredBrainPopulationSize}");
-        LogWriter.Invoke($"cellTypesAllowedForMutation: {string.Join("|", cellTypesAllowedForMutation.Keys)}");
+        LogWriter.Invoke($"Cell types allowed for mutation: {string.Join("|", cellTypesAllowedForMutation.Keys)}");
         LogWriter.Invoke($"% elite to preserve: {topBrainsToPreservePercentage}");
         LogWriter.Invoke($"Mutation methods: {string.Join("|", mutationMethods)}");
         LogWriter.Invoke($"% chance of mutation: {PercentageChanceOfMutation}");
         LogWriter.Invoke($"# mutations per neuron: {HowManyTimesToMutateANeuron}");
-        LogWriter.Invoke($"SelectionType: {Selection}");
+        LogWriter.Invoke($"Selection Type: {Selection}");
 
         InitialiseBrains();
     }
@@ -398,7 +396,7 @@ internal class LearningFramework
         StatisticsForGraphs bestPlayerAI = LearningController.s_learningFramework.performanceOfBestPlayerPerGeneration[^1];
 
         // get unique filename in .\Templates\
-        File.WriteAllText($@".\Templates\{PersistentConfig.Settings.InputToAI} {(PersistentConfig.Settings.UseActionFireApproach ? "action" : "position")} s={bestPlayerAI.Score} lvl={bestPlayerAI.Level} ik={bestPlayerAI.InvadersKilled} sk={bestPlayerAI.SaucersKilled}.tem", bestBrain.GetAsTemplate());
+        File.WriteAllText($@".\Templates\{PersistentConfig.Settings.InputToAI} {(PersistentConfig.Settings.UseActionFireApproach ? "action" : "position")} lvl={bestPlayerAI.Level} s={bestPlayerAI.Score} ik={bestPlayerAI.InvadersKilled} sk={bestPlayerAI.SaucersKilled}.ai", bestBrain.GetAsTemplate());
     }
 
     /// <summary>
@@ -413,7 +411,7 @@ internal class LearningFramework
         CalculateScoringOfAIPlayers();
 
         // draw a PNG of the best brain
-        if (Visualiser.s_visualisationsEnabled)
+        if (Visualiser.VisualisationsEnabled)
         {
             new Visualiser(BrainsBeingTrained.Values.ElementAt(0)).RenderAndSaveDiagramToPNG($@"c:\temp\Best brain - Generation {Generation}.png");
             MessageBox.Show(@$"Visualisation saved to c:\temp\Best brain - Generation {Generation}.png");
@@ -434,7 +432,8 @@ internal class LearningFramework
         {
             BrainsBeingTrained.Add(thisBrain.Id, thisBrain);
 
-            if (DrawCohortsDuringVisualisation && Visualiser.s_visualisationsEnabled)
+            // SonarQube complains because some of these settings are generally not used (==false) and for debugging / tracing.
+            if (DrawCohortsDuringVisualisation && Visualiser.VisualisationsEnabled)
             {
                 new Visualiser(thisBrain).RenderAndSaveDiagramToPNG($@"c:\temp\Cohort - Generation {Generation} #{cohortIndexNumber++} - {thisBrain.Name}.png");
                 File.WriteAllText(Path.Combine($@"d:\temp\cohort g{Generation} {thisBrain.Id}-{thisBrain.Name}.txt"), thisBrain.GetAsTemplate());
@@ -443,7 +442,7 @@ internal class LearningFramework
 
         LogWriter.Invoke($"New Generation: {Generation}, READY TO LEARN");
 
-        Visualiser.s_visualisationsEnabled = false;
+        Visualiser.DisableVisualisations();
         StartLearning();
     }
 
@@ -626,10 +625,10 @@ internal class LearningFramework
 
         // 500 is the rough number for the graph to look good. If you have a lot of generations,
         // it will be slow to draw and eat memory for no good reason. So we remove the oldest.
-        if (performanceOfBestPlayerPerGeneration.Count > 500)
+        if (performanceOfBestPlayerPerGeneration.Count > 499)
         {
             performanceOfBestPlayerPerGeneration.RemoveAt(0);
-            ++GenerationMultiplier; // compensate for the missing one
+            ++generationMultiplier; // compensate for the missing one
         }
 
         // track the last 5 performance scores per brain
@@ -646,11 +645,16 @@ internal class LearningFramework
 
         foreach (int id in BrainsBeingTrained.Keys)
         {
+            // these should never be null, but just in case
+            Debug.Assert(BrainsBeingTrained[id].AIPlayer is not null);
+            Debug.Assert(BrainsBeingTrained[id].AIPlayer?.gameController is not null);
+
             LogWriter.Invoke(
                 $"{BrainsBeingTrained[id].Name,10} - DNA: {BrainsBeingTrained[id].DNA} Genome size: [{BrainsBeingTrained[id].GenomeSize}] Moves to mutation: {PersistentConfig.Settings.MovesBeforeMutation} Game Score: [{BrainsBeingTrained[id].RealScore,6}]  " +
                 $"High Score: [{BrainsBeingTrained[id].RealBestScore,6}]  AI Fitness: [{Math.Round(BrainsBeingTrained[id].Fitness),6}] AI Last Fitness: [{Math.Round(BrainsBeingTrained[id].LastFitness),6}]  " +
                 $"AI Score (rank-by): [{Math.Round(BrainsBeingTrained[id].Score),6}] - Fitness Metrics: [{GetLast5PerformanceScoresForBrain(BrainsBeingTrained[id])}] " +
-                $"Lives: {BrainsBeingTrained[id].AIPlayer.gameController.Lives}");
+                $"Lives: {BrainsBeingTrained[id].AIPlayer?.gameController?.Lives}");
+
             LogWriter.Invoke($"      calculation: {BrainsBeingTrained[id].FitnessSummary.Replace("\n", " ")}\n");
         }
 
@@ -668,20 +672,18 @@ internal class LearningFramework
     private static string GetLast5PerformanceScoresForBrain(Brain brain)
     {
         int[] perf = brain.Performance.ToArray();
-        string lastResults = "";
+        StringBuilder lastResults = new();
 
         if (perf.Length > 0)
         {
             for (int i = perf.Length - 1; i >= Math.Max(0, perf.Length - 5); i--)
             {
-                lastResults += perf[i].ToString() + ",";
+                lastResults.Append(perf[i].ToString() + ",");
             }
-
-            // we're appending "," after each metric, so last result will have a ",", so we need to trim it here.
-            lastResults = lastResults.TrimEnd(',');
         }
 
-        return lastResults;
+        // we're appending "," after each metric, so last result will have a ",", so we need to trim it here.
+        return lastResults.ToString().TrimEnd(','); ;
     }
 
     /// <summary>
@@ -780,19 +782,19 @@ internal class LearningFramework
 
         if (!string.IsNullOrWhiteSpace(TemplateOfBrain))
         {
-            newBrain = Brain.CreateFromTemplate(TemplateOfBrain, Brain.NextUniqueBrainID.ToString());
+            newBrain = Brain.CreateFromTemplate(TemplateOfBrain, UniqueBrainID.GetNextBrainId());
             newBrain.lineage = "Templated";
         }
         else
         {
-            newBrain = new Brain(Brain.NextUniqueBrainID.ToString(), AllowedActivationFunctions, brainInputParameters, brainOutputParameters);
+            newBrain = new Brain(UniqueBrainID.GetNextBrainId(), AllowedActivationFunctions, brainInputParameters, brainOutputParameters);
             newBrain.AddNetworkWithConnectedInputOutputs("network", AllowedActivationFunctions);
             newBrain.AllowedCellTypes = cellTypesAllowedForMutation;
 
             // a random network 
             if (UseRandomNetwork)
             {
-                Architecture.CreateRandomNetwork(newBrain.Networks["network"], brainInputParameters, brainOutputParameters, DesiredBrainSizeInNeurons); // TODO: specifying params
+                Architecture.CreateRandomNetwork(newBrain.Networks["network"], brainInputParameters, brainOutputParameters, DesiredBrainSizeInNeurons);
             }
             else
             {
@@ -824,8 +826,7 @@ internal class LearningFramework
         {
             if (brain.GenomeSize >= c_maximumAllowedCellsInBrain)
             {
-                // if (config.warnings) 
-                //Debug.WriteLine("maxNodes exceeded!");
+                Debug.WriteLine("maxNodes exceeded!");
                 return null;
             }
             else
@@ -833,7 +834,7 @@ internal class LearningFramework
                 // stop it exceeding the size.
                 if (brain.GenomeSize >= PersistentConfig.Settings.MaximumNumberOfNeurons)
                 {
-                    //Debug.WriteLine("AddCell mutation blocked as it has reached the maximum number of neurons allowed in a network.");
+                    Debug.WriteLine("AddCell mutation blocked as it has reached the maximum number of neurons allowed in a network.");
                     return null;
                 }
             }
@@ -844,15 +845,14 @@ internal class LearningFramework
             // stop it exceeding the size.
             if (brain.GenomeSize <= PersistentConfig.Settings.MinimumNumberOfNeurons)
             {
-                //Debug.WriteLine("AddCell mutation blocked as it has reached the minimum number of neurons allowed in a network.");
+                Debug.WriteLine("AddCell mutation blocked as it has reached the minimum number of neurons allowed in a network.");
                 return null;
             }
         }
 
         if (mutationMethod == MutationMethod.AddConnection && brain.ConnectionsSize >= c_maximumAllowedConnectionsInBrain)
         {
-            // if (config.warnings)
-            // Debug.WriteLine("maxConns exceeded!");
+            Debug.WriteLine("maxConns exceeded!");
             return null;
         }
 
@@ -906,8 +906,6 @@ internal class LearningFramework
 
         b.LastOverallGenomeSize = (parent1.OverallGenomeSize + parent2.OverallGenomeSize) / 2;
         b.LastFitness = (parent1.Fitness + parent2.Fitness) / 2; // average of parents
-
-        //b.Performance.Add((int)b.LastFitness);
 
         LogWriter.Invoke($"{b.Name} is GetOffspring() based on {parent1.Name} with {parent2.Name}");
 
@@ -966,7 +964,7 @@ internal class LearningFramework
                 // It tries from best to worst order, picking that brain if the random number generator picks it.
                 // if none are selected, it returns the worst.
 
-                if (c_tournamentSelectionSize > DesiredBrainPopulationSize) throw new Exception("Tournament size should be lower than the population size.");
+                if (c_tournamentSelectionSize > DesiredBrainPopulationSize) throw new ApplicationException("Tournament size should be lower than the population size.");
 
                 // make a smaller list picked completely at random from the population regardless of fitness; we then pick from
                 // those in order of fitness, with a greater chance of picking higher ranking above lower
@@ -994,6 +992,6 @@ internal class LearningFramework
                 return individuals[c_tournamentSelectionSize - 1];
         }
 
-        throw new Exception("logic error");
+        throw new ApplicationException("logic error");
     }
 }

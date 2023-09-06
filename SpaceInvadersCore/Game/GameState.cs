@@ -50,12 +50,12 @@ internal class GameState
         set
         {
             if (gameOver == value) return; // no change
-            
+
             gameOver = value;
 
             if (gameOver) // we've just gone game over, so draw the game over message.
             {
-                videoScreen.DrawString("GAME OVER", new Point(76, 50));
+                videoScreen.DrawString("GAME OVER", new Point(76, 40));
             }
         }
     }
@@ -76,12 +76,12 @@ internal class GameState
         }
         set
         {
-            if (value == true) GameOver = true;
+            if (value) GameOver = true;
 
             invadersReachedBottom = value;
         }
     }
-    
+
     /// <summary>
     /// How many times the player shot their own shields.
     /// </summary>
@@ -150,8 +150,16 @@ internal class GameState
     {
         lives = 0;
         Lives = 3; // standard number of lives
-     
+
         GameOver = false; // player is yet to be killed.
+    }
+
+    /// <summary>
+    /// Used to reset the shields hit between levels.
+    /// </summary>
+    internal void ResetShieldCount()
+    {
+        ShieldsHit = 0;
     }
 
     /// <summary>
@@ -183,7 +191,7 @@ internal class GameState
     /// <returns></returns>
     private static Point LifeSpritePosition(int life)
     {
-        return new Point(16 + life * 16, OriginalDataFrom1978.c_greenLineIndicatingFloorPX + 8);
+        return new Point(OriginalDataFrom1978.s_additionalLifeLocation.X + life * 16, OriginalDataFrom1978.s_additionalLifeLocation.Y);
     }
 
     /// <summary>
@@ -193,9 +201,9 @@ internal class GameState
     private void WriteLivesInBottomLeft()
     {
         // erase any existing live.
-        videoScreen.FillRectangle(Color.Black, new Rectangle(8, OriginalDataFrom1978.c_greenLineIndicatingFloorPX + 1, 16, 8));
+        videoScreen.FillRectangle(Color.Black, new Rectangle(OriginalDataFrom1978.s_livesNumberLocation.X, OriginalDataFrom1978.s_livesNumberLocation.Y, 2 * 8, 8)); // 2 chars, 8 pixels wide
 
         // write the lives in the SI font
-        videoScreen.DrawString(Lives.ToString(), new Point(8, OriginalDataFrom1978.c_greenLineIndicatingFloorPX + 1));
+        videoScreen.DrawString(Lives.ToString(), OriginalDataFrom1978.s_livesNumberLocation);
     }
 }

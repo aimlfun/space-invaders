@@ -57,8 +57,6 @@ internal class Connection
         From = from;
         To = to;
         Weight = weight;
-
-        //Debug.WriteLine($"ADD CONNECTION {this}");
     }
 
     /// <summary>
@@ -72,8 +70,6 @@ internal class Connection
         From = from.Id;
         To = to.Id;
         Weight = Utils.RandomNumberPlusOrMinus1();
-
-        //Debug.WriteLine($"ADD CONNECTION {this}");
     }
 
     /// <summary>

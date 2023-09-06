@@ -1,5 +1,7 @@
 ﻿using SpaceInvadersCore;
 using System.Drawing;
+using static System.Formats.Asn1.AsnWriter;
+using System.Reflection;
 
 namespace SpaceInvadersCore.Game
 {
@@ -17,38 +19,6 @@ namespace SpaceInvadersCore.Game
         //  █   █   █   █   █   █   █  █    █       █   █   █   █   █   █   █  █    █   █
         //   ███     ███     ███    █   █   █████   ████     ███    █   █   █   █   ████
 
-        /// <summary>
-        /// Scoring points for an invader.
-        /// The original is 30,20,10.
-        /// </summary>
-        const int c_invaderPointsRow0 = 30;
-        const int c_invaderPointsRow1and2 = 20;
-        const int c_invaderPointsRow3and4 = 10;
-
-        /// <summary>
-        /// The points awarded for killing an invader indexed by the row of the invader.
-        /// </summary>
-        private int[] invaderPoints = new[] { c_invaderPointsRow3and4, c_invaderPointsRow3and4, c_invaderPointsRow1and2, c_invaderPointsRow1and2, c_invaderPointsRow0 };
-        
-        /// <summary>
-        /// This is the rectangle that will be used to draw the score.
-        /// </summary>
-        private static Rectangle s_scoreRectangle = new(24, 24, 32, 8);
-
-        /// <summary>
-        /// This is the rectangle that will be used to draw the high score.
-        /// </summary>
-        private static Rectangle s_highScoreRectangle = new(88, 24, 32, 8);
-
-        /// <summary>
-        /// This is the location where the score will be drawn.
-        /// </summary>
-        private static Point s_scoreLocation = new(24, 24);
-
-        /// <summary>
-        /// This is the location where the high score will be drawn.
-        /// </summary>
-        private static Point s_highScoreLocation = new(88, 24);
 
         /// <summary>
         /// The score the player currently has.
@@ -78,6 +48,7 @@ namespace SpaceInvadersCore.Game
         internal void AISetScore(int fakedScore)
         {
             score = fakedScore;
+            Draw();
         }
 
         /// <summary>
@@ -143,8 +114,8 @@ namespace SpaceInvadersCore.Game
             //    0000    0000                  <<<----
 
             // We don't "erase" the score, we just draw over it with black. Erasing would be slower, and we don't have to avoid pixels like bullets.
-            videoScreen.FillRectangle(Color.Black, s_scoreRectangle);
-            videoScreen.DrawString(ScoreAfter10KUsingSymbols(score), s_scoreLocation);
+            videoScreen.FillRectangle(Color.Black, OriginalDataFrom1978.s_scorePlayer1Rectangle);
+            videoScreen.DrawString(ScoreAfter10KUsingSymbols(score), OriginalDataFrom1978.s_scorePlayer1Location);
 
             // If the score is higher than the high score, update the high score (not every time, just when it changes).
             if (Score > HighScore)
@@ -163,17 +134,20 @@ namespace SpaceInvadersCore.Game
             // see https://www.youtube.com/watch?v=MU4psw3ccUI.
             // I really want to add 8px to "88" so it's centred, but I'm not going to.
 
-            videoScreen.FillRectangle(Color.Black, s_highScoreRectangle);
-            videoScreen.DrawString(ScoreAfter10KUsingSymbols(HighScore), s_highScoreLocation);
+            videoScreen.FillRectangle(Color.Black, OriginalDataFrom1978.s_highScoreRectangle);
+            videoScreen.DrawString(ScoreAfter10KUsingSymbols(HighScore), OriginalDataFrom1978.s_highScoreLocation);
         }
 
         /// <summary>
-        /// Space Invaders loops around to 0 after 9990, and only has space for 4 digits.
-        /// Given we are not putting it back to 0, we need to convert the score to a string that fits in 4 digits,
+        /// The Space Invaders original loops around to 0 after 9990, and only has space for 4 digits. 
+        /// Because of that it also awards more extra lives (every time it hits 1500).
+        /// The output happens, because it uses BCD and writes LSB and MSB as 2 digit hex.
+        /// 
+        /// Given we are not cycling it back to 0, we need to convert the score to a string that fits in 4 digits,
         /// so we use symbols to represent 10K, 100K, 1M.
         /// 0000-9999
         ///  10K-999K
-        ///  1M-99999999M, at which point the display will be a mess as it does not erase fully scores > 4 chars.
+        ///   1M-999M, after which the display will be a mess as it does not erase fully scores > 4 chars.
         /// Decimal points are not an option, with the limited screen space.
         /// </summary>
         /// <param name="scoreToConvert"></param>
@@ -223,9 +197,9 @@ namespace SpaceInvadersCore.Game
         private void IncrementScoreBy(int amount)
         {
             int scoreBefore = score;
-            
+
             score += amount;
-            
+
             CheckForBonusLife(scoreBefore);
         }
 
@@ -237,7 +211,7 @@ namespace SpaceInvadersCore.Game
         {
             if (invaderRow < 0 || invaderRow > 5) throw new ArgumentOutOfRangeException(nameof(invaderRow), "5 invader rows, 0..4");
 
-            IncrementScoreBy(invaderPoints[invaderRow]);
+            IncrementScoreBy(OriginalDataFrom1978.s_invaderPoints[invaderRow]);
 
             ++invaderKills;
         }

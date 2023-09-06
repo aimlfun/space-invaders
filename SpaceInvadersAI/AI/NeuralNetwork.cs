@@ -75,12 +75,12 @@ internal class NeuralNetwork : IDisposable
     /// <summary>
     /// The external INPUTs to this neural network.
     /// </summary>
-    internal Dictionary<string, INPUTCell> Inputs = new();
+    internal Dictionary<string, InputCell> Inputs = new();
 
     /// <summary>
     /// The OUTPUTs to this neural network.
     /// </summary>
-    internal Dictionary<string, OUTPUTCell> Outputs = new();
+    internal Dictionary<string, OutputCell> Outputs = new();
 
     /// <summary>
     /// This contains the allowed activation functions for this network.
@@ -139,7 +139,7 @@ internal class NeuralNetwork : IDisposable
         if (inputs is not null)
         {
             // copy the inputs (value by ref works, thankfully i.e. edit brain input changes network input)
-            foreach (string inpId in inputs as string[])
+            foreach (string inpId in inputs)
             {
                 if (!brainNetworkBelongsTo.BrainInputs.ContainsKey(inpId))
                 {
@@ -148,7 +148,7 @@ internal class NeuralNetwork : IDisposable
 
                 if (MakeInterface)
                 {
-                    INPUTCell input = new(brainNetworkBelongsTo, this, inpId, Utils.RandomFloatBetweenMinusHalfToPlusHalf(), BaseCell.RandomActivationFunction(this), RarelyModifiedSettings.DefaultCellActivationThreshold);
+                    InputCell input = new(brainNetworkBelongsTo, this, inpId, Utils.RandomFloatBetweenMinusHalfToPlusHalf(), BaseCell.RandomActivationFunction(this), RarelyModifiedSettings.DefaultCellActivationThreshold);
                     Inputs.Add(inpId, input);
                     Neurons.Add(inpId, input);
                 }
@@ -168,7 +168,7 @@ internal class NeuralNetwork : IDisposable
 
                 if (MakeInterface)
                 {
-                    OUTPUTCell output = new(brainNetworkBelongsTo, this, idOfOutput, Utils.RandomFloatBetweenMinusHalfToPlusHalf(), BaseCell.RandomActivationFunction(this), RarelyModifiedSettings.DefaultCellActivationThreshold);
+                    OutputCell output = new(brainNetworkBelongsTo, this, idOfOutput, Utils.RandomFloatBetweenMinusHalfToPlusHalf(), BaseCell.RandomActivationFunction(this), RarelyModifiedSettings.DefaultCellActivationThreshold);
                     Outputs.Add(idOfOutput, output);
                     Neurons.Add(idOfOutput, output);
                 }
@@ -188,9 +188,9 @@ internal class NeuralNetwork : IDisposable
     /// <returns></returns>
     internal NeuralNetwork ApplyRectifierImprovement()
     {
-        foreach (INPUTCell bi in Inputs.Values)
+        foreach (InputCell bi in Inputs.Values)
         {
-            foreach (OUTPUTCell bo in Outputs.Values)
+            foreach (OutputCell bo in Outputs.Values)
             {
                 // https://arxiv.org/abs/1502.01852
                 // Rectified activation units (rectifiers) are essential for state-of-the-art neural networks. In this work, we 
@@ -202,7 +202,7 @@ internal class NeuralNetwork : IDisposable
                 // This is a 26% relative improvement over the ILSVRC 2014 winner (GoogLeNet, 6.66%). To our knowledge, our result is the first to surpass 
                 // human-level performance (5.1%, Russakovsky et al.) on this visual recognition challenge.
 
-                double weight = Utils.RandomNumberPlusOrMinus1() * Inputs.Count * Math.Sqrt(2 / Inputs.Count);
+                double weight = Utils.RandomNumberPlusOrMinus1() * Inputs.Count * Math.Sqrt((double)2 / (double)Inputs.Count);
 
                 // no point in having 0 weight connections, they just slow down processing
                 if (Math.Abs(weight) > 0.000001f) Connect(bi, bo, weight);
@@ -226,15 +226,15 @@ internal class NeuralNetwork : IDisposable
 
         BaseCell cell = cellType switch
         {
-            CellType.AND => new ANDCell(b, this, id, bias, activationFunction, cellActivationThreshold),
-            CellType.IF => new IFCell(b, this, id, bias, activationFunction, cellActivationThreshold),
-            CellType.MAX => new MAXCell(b, this, id, bias, activationFunction, cellActivationThreshold),
-            CellType.MIN => new MINCell(b, this, id, bias, activationFunction, cellActivationThreshold),
-            CellType.PERCEPTRON => new PERCEPTRONCell(b, this, id, bias, activationFunction, cellActivationThreshold),
-            CellType.TRANSISTOR => new TRANSISTORCell(b, this, id, bias, activationFunction, cellActivationThreshold),
-            CellType.INPUT => new INPUTCell(b, this, id, bias, activationFunction, cellActivationThreshold),
-            CellType.OUTPUT => new OUTPUTCell(b, this, id, bias, activationFunction, cellActivationThreshold),
-            _ => throw new Exception($"cell type not supported {cellType}"),
+            CellType.AND => new AndCell(b, this, id, bias, activationFunction, cellActivationThreshold),
+            CellType.IF => new IfCell(b, this, id, bias, activationFunction, cellActivationThreshold),
+            CellType.MAX => new MaxCell(b, this, id, bias, activationFunction, cellActivationThreshold),
+            CellType.MIN => new MinCell(b, this, id, bias, activationFunction, cellActivationThreshold),
+            CellType.PERCEPTRON => new PerceptronCell(b, this, id, bias, activationFunction, cellActivationThreshold),
+            CellType.TRANSISTOR => new TransistorCell(b, this, id, bias, activationFunction, cellActivationThreshold),
+            CellType.INPUT => new InputCell(b, this, id, bias, activationFunction, cellActivationThreshold),
+            CellType.OUTPUT => new OutputCell(b, this, id, bias, activationFunction, cellActivationThreshold),
+            _ => throw new ArgumentException( $"cell type not supported {cellType}", nameof(cellType)),
         };
 
         return cell;
@@ -403,8 +403,6 @@ internal class NeuralNetwork : IDisposable
     /// <exception cref="NotImplementedException"></exception>
     internal void FeedForward()
     {
-        //Debug.WriteLine($"FEED FORWARD \"{Id}\" - start");
-
         // we do this in order. We apply impact of the "Inputs" first, before hidden, and lastly determine the output.
 
         // A possible optimisation is to do this in parallel, but we need to be careful about the order of activation, but this is too
@@ -426,8 +424,6 @@ internal class NeuralNetwork : IDisposable
         {
             OutputAsArray[i].Activate();
         }
-
-        //Debug.WriteLine($"FEED FORWARD \"{Id}\" - stop");
     }
     #endregion 
 
@@ -476,7 +472,7 @@ internal class NeuralNetwork : IDisposable
         {
             string thisLine = linesPfText[line++];
 
-            if (thisLine.StartsWith("#"))
+            if (thisLine.StartsWith('#'))
             {
                 continue; // # indicates its a comment
             }
@@ -511,8 +507,6 @@ internal class NeuralNetwork : IDisposable
 
         foreach (string id in networksAsText.Keys)
         {
-            //NeuralNetwork n = brainNetworkBelongsTo.AddEmptyNetwork(id);
-
             NeuralNetwork n = new(
                 id: id,
                 brainNetworkBelongsTo: brainNetworkBelongsTo,
@@ -530,8 +524,8 @@ internal class NeuralNetwork : IDisposable
                 {
 
                     BaseCell cell = BaseCell.Deserialise(brainNetworkBelongsTo, n, lineOfTextExpressingNetwork);
-                    if (cell is INPUTCell cell1) n.Inputs.Add(cell.Id,cell1);
-                    if (cell is OUTPUTCell cell2) n.Outputs.Add(cell.Id, cell2);
+                    if (cell is InputCell cell1) n.Inputs.Add(cell.Id,cell1);
+                    if (cell is OutputCell cell2) n.Outputs.Add(cell.Id, cell2);
                 }
 
                 if (lineOfTextExpressingNetwork.StartsWith("ADD CONNECTION "))
@@ -603,13 +597,13 @@ internal class NeuralNetwork : IDisposable
 
             case MutationMethod.ModifyActivationFunction:
                 {
-                    MutateThresholdOnARandomCell();
+                    MutateActivationFunctionOnARandomCell();
                     break;
                 }
 
             case MutationMethod.ModifyThreshold:
                 {
-                    MutateActivationFunctionOnARandomCell();
+                    MutateThresholdOnARandomCell();
                     break;
                 }
 
@@ -659,7 +653,6 @@ internal class NeuralNetwork : IDisposable
             // connect from new cell to previous endpoint
             cell.ConnectTo(previousConnectedTo);
 
-            // TODO: fix this inefficient hack. Goal Dictionary.InsertAt(). 
             // order is important as we evaluate in that order.
 
             List<BaseCell> cells = Neurons.Values.ToList();
@@ -678,17 +671,6 @@ internal class NeuralNetwork : IDisposable
                 cells.Insert(pos, cell);
             }
 
-            /*
-            Neurons.Clear();
-
-            // recreate brain cells.
-            for (int i = 0; i < cells.Count; i++)
-            {
-                Neurons.Add(keys[i], cells[i]);
-            }
-            */
-
-            // ChatGPT suggested:
             Neurons = keys.Zip(cells, (key, val) => new { key, val }).ToDictionary(x => x.key, x => x.val);
         }
 
@@ -965,7 +947,7 @@ internal class NeuralNetwork : IDisposable
 
         if (availableToConnect.Count == 0)
         {
-            //Debug.WriteLine("! unable to connect self- cells, as no neurons have spare connection slots");
+            // unable to connect self- cells, as no neurons have spare connection slots...
             return;
         }
 
@@ -1010,7 +992,7 @@ internal class NeuralNetwork : IDisposable
 
         if (availableToDisconnect.Count == 0)
         {
-            //Debug.WriteLine("! unable to disconnect cells, as no available connections to remove");
+            // unable to disconnect cells, as no available connections to remove
             return;
         }
 
@@ -1048,7 +1030,7 @@ internal class NeuralNetwork : IDisposable
             Neurons[outboundConnection.To].InboundConnections.Remove(c);
         }
 
-        AllNetworkConnections.Remove(outboundConnection.KeyFromTo); //Debugger.Break();
+        AllNetworkConnections.Remove(outboundConnection.KeyFromTo);
     }
 
     /// <summary>
@@ -1171,7 +1153,7 @@ internal class NeuralNetwork : IDisposable
 
                 Neurons.Clear();
 
-                AllNetworkConnections.Clear(); // brain cells dispose() destroy the connections. TODO: move connection removal to network, not in cell dispose
+                AllNetworkConnections.Clear(); // brain cells dispose() destroy the connections.
 
                 Inputs.Clear();
                 Outputs.Clear();

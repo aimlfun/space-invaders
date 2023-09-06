@@ -189,7 +189,7 @@ internal static class TestHarnessForBrainSerialisation
     private static Brain SetupReferenceObject(string[] inputs, string[] outputParameters, ActivationFunction[] activationFunctions)
     {
         // this is our object that we're going to repeatedly mutate, serialise and de-serialise
-        Brain referenceBrainObject = new(Brain.NextUniqueBrainID.ToString(), activationFunctions, inputs, outputParameters);
+        Brain referenceBrainObject = new(UniqueBrainID.GetNextBrainId(), activationFunctions, inputs, outputParameters);
 
         // output the object in readable form to confirm it looks correct
         File.WriteAllText(@"c:\temp\referenceBrainObject-after-creation.txt", referenceBrainObject.GetBrainAsText());

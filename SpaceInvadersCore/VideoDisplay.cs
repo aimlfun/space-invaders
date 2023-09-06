@@ -33,39 +33,55 @@ public class VideoDisplay
     //   █ █      █     █   █   █       █   █           █   █     █     █   █   █       █       █   █     █
     //    █      ███    ████    █████    ███            ████     ███     ███    █       █████   █   █     █
 
-    #region DEBUGGING
-    // W A R N I N G :  DO NOT LEAVE THIS SET TO TRUE, IT WILL SLOW THE GAME DOWN HUGELY, AND FILL YOUR DISK WITH FRAME BY FRAME IMAGES!
-    /// <summary>
-    /// When true, it will save the bitmap to disk.
-    /// </summary>
-    private static readonly bool c_debugDrawEveryFrameAsAnImage = false;
 
-    /// <summary>
-    /// If debugging is on it, it will output every frame sequentially to this file.
-    /// Note the path below is for my machine, you will need to change it. c:\temp\frames\ 
-    /// </summary>
-    private const string c_debuggingFileName = @"c:\temp\frames\SpaceInvader-video-debug-frame-{{debuggingFrameNumberForFileName}}.png";
+    // The Space Invader video screen is naturally, 256 x 224 pixels.
 
-    /// <summary>
-    /// Used to number the debugging frames images sequentially.
-    /// </summary>
-    private int debuggingFrameNumberForFileName = 1;
+    // 2400                     241f
+    // +------------------------+
+    // |                        |
+    // |                        |
+    // |------------------------224   -- ScanLine96
+    // |                        |
+    // |                        |
+    // +----------256-----------+     -- ScanLine224 VBLANK
+    // 3FE0
 
-    /// <summary>
-    /// When true, it will draw a box around each sprite.
-    /// </summary>
-    private static readonly bool c_drawBoxesAroundSprites = false;
+    // BUT... Taito rotated it 90 degrees counter clockwise, so it is 224 x 256 pixels.
 
-    /// <summary>
-    /// This is the brush used to draw a pixel overlay on top of the video display. It indicates what chunky pixels the AI sees.
-    /// </summary>
-    private static readonly SolidBrush brushForOverlay = new(Color.FromArgb(220, 255, 100, 100));
-    #endregion
+    // 241F
+    // +--------------------+
+    // |                    |        
+    // |                    |
+    // |                    |
+    // |                   256
+    // |                    |
+    // |                    |
+    // |                    |
+    // +---------224--------+      ^ bits are plotted UPWARDS y,x (not x,y). That's why the sprites are rotated 90 clockwise degrees.
+    // 2400                 3FE0
+
+    // e.g the bits 10000011
+    //
+    // +---
+    // |
+    // |
+    // |
+    // ..
+    // |1 }
+    // |0 }
+    // |0 }
+    // |0 }
+    // |0 } 1 byte ^
+    // |0 }        |
+    // |1 }        |
+    // +1 }
+
 
     #region CONSTANTS - DO NOT CHANGE THESE VALUES!
     /// <summary>
     /// Pixels are 32bit ARGB, stored BGRA in terms of offset.
     /// This is the offset for BLUE.
+    /// SonarQube: "Remove this unused 'c_offsetBlueChannel' private field.". I don't want to. It's not referenced, but to add clarity to the code, I'm leaving it in.
     /// </summary>
     private const int c_offsetBlueChannel = 0;
 
@@ -101,7 +117,7 @@ public class VideoDisplay
     /// This is how many bytes each pixel occupies in the bitmap.
     /// DO NOT CHANGE THIS! ALL THE FAST DRAWING METHODS EXPECT ARGB (4 BYTE) PIXELS.
     /// </summary>
-    private const int c_bytesPerPixel = 4; // PixelFormat.Format32bppArgb = Bitmap.GetPixelFormatSize(srcBitMapData.PixelFormat) / 8;
+    private const int c_bytesPerPixel = 4; // is the equivalent of PixelFormat.Format32bppArgb. 32 bits per pixel, 4 bytes per pixel (A,R,G,B).
 
     /// <summary>
     /// This is how many bytes the bitmap is. 
@@ -124,27 +140,6 @@ public class VideoDisplay
     /// Back buffer size is equal to the number of pixels to draw on screen: Width x Height x * 4 (4=R,G,B & Alpha values). 
     /// </summary>
     private readonly byte[] BackBuffer;
-
-    /// <summary>
-    /// Attempt to warn developers that they have debugging turned on, and turn it off if not being debugged.
-    /// </summary>
-    static VideoDisplay()
-    {
-        // is the debug on?
-        if (!c_debugDrawEveryFrameAsAnImage) return;
-
-        if (!Debugger.IsAttached) // no debugger, we need to turn it off for performance, and to avoid filling the disk.
-        {
-            c_debugDrawEveryFrameAsAnImage = false;
-            c_drawBoxesAroundSprites = false;
-        }
-        else
-        {
-            Debug.WriteLine("WARNING: DEBUG IS TURNED ON. THIS WILL WRITE FRAME BY FRAME TO DISK, AND FILL IT.");
-            Debug.WriteLine($"Debug frame-by-frame will be written to \"{c_debuggingFileName}\".");
-            Debugger.Break(); // last chance saloon.
-        }
-    }
 
     /// <summary>
     /// Constructor.
@@ -173,7 +168,10 @@ public class VideoDisplay
         bitmapBeingModifiedDirectly.UnlockBits(bitmapBeingModifiedDirectlyData);
 
         // frame by frame recording
-        if (c_debugDrawEveryFrameAsAnImage) bitmapBeingModifiedDirectly.Save(c_debuggingFileName.Replace("{{debuggingFrameNumberForFileName}}", (debuggingFrameNumberForFileName++).ToString().PadLeft(10, '0')), ImageFormat.Png);
+        if (DebugSettings.c_debugDrawEveryFrameAsAnImage)
+        {
+            bitmapBeingModifiedDirectly.Save(DebugSettings.GetFrameFilename(), ImageFormat.Png);
+        }
 
         return bitmapBeingModifiedDirectly;
     }
@@ -190,6 +188,13 @@ public class VideoDisplay
             BackBuffer[index + c_offsetGreenChannel] = colour.G;
             BackBuffer[index + c_offsetRedChannel] = colour.R;
             BackBuffer[index + c_offsetAlphaChannel] = 255;
+        }
+
+        // useful if you need to know that the step down occurs at the correct place on the screen.
+        if (DebugSettings.c_debugDrawVerticalLinesIndicatingStepDown)
+        {
+            DrawVerticalLine(Color.Blue, 9);
+            DrawVerticalLine(Color.Blue, 213);
         }
     }
 
@@ -280,13 +285,13 @@ public class VideoDisplay
     /// <returns></returns>
     private static Color ColourBasedOnFilm(int y)
     {
-        //  +----------------------------------------------------------+ _ 8
-        //  | SCORE<1>               HIGH-SCORE               SCORE<2> | _ 16
+        //  +----------------------------------------------------------+ _ 8 s_score1HighScoreAndScore2Position
+        //  | SCORE<1>               HIGH-SCORE               SCORE<2> |  
         //  |                                                         .| _ 24
-        //  |   0010                    1000                           |
-        //  |..........................................................| } y=34
+        //  |   0010                    1000                           | s_scorePlayer1Location, s_highScoreLocation, s_scorePlayer2Location
+        //  |..........................................................| } y=47
         //  |.<ooo>....................................................| } red transparent film 
-        //  |..........................................................| } y=55
+        //  |..........................................................| } y=58
         //  | /o\ /o\ /o\ /o\ /o\ /o\ /o\ /o\ /o\ /o\ /o\              |
         //  |                                                          |
         //  | \#/ \#/ \#/ \#/ \#/ \#/ \#/ \#/ \#/ \#/ \#/              |
@@ -298,7 +303,7 @@ public class VideoDisplay
         //  | {o} {o} {o} {o} {o} {o} {o} {o} {o} {o} {o}              |
         //  |                                                          |
         //  |                                                          |
-        //  |.....##.............##..............##.............##.....| } y=c_greenLineIndicatingFloorPX-60
+        //  |.....##.............##..............##.............##.....| } y = OriginalDataFrom1978.c_topOfShieldsPX-8
         //  |....####...........####............####...........####....| }
         //  |... #..#...........#..#............#..#...........#..#....| }
         //  |..........................................................| } green transparent film
@@ -310,8 +315,8 @@ public class VideoDisplay
         //       |<----- green film -------->|   this is so the extra lives are drawn green
         //       16                          136
 
-        if (y > 33 && y < 56) return Color.FromArgb(255, 255, 25, 0); // magenta film.
-        if (y > OriginalDataFrom1978.c_greenLineIndicatingFloorPX - 60 && y < 242) return OriginalDataFrom1978.s_playerColour; // green film.
+        if (y > 33 && y < 58) return Color.FromArgb(255, 255, 25, 0); // magenta film.
+        if (y > OriginalDataFrom1978.c_topOfShieldsPX - 8 && y < OriginalDataFrom1978.c_greenLineIndicatingFloorPX) return OriginalDataFrom1978.s_playerColour; // green film.
 
         return Color.White; // non coloured
     }
@@ -322,10 +327,10 @@ public class VideoDisplay
     /// <param name="sprite"></param>
     /// <param name="x"></param>
     /// <param name="y"></param>
-    public unsafe void DrawSprite(Sprite sprite, int x, int y)
+    public unsafe void DrawSprite(Sprite sprite, int x, int y, byte alpha = 255)
     {
         // debugging? Show a box around the sprite (before drawing it)
-        if (c_drawBoxesAroundSprites) DrawRectangle(Color.Blue, new Rectangle(x, y, sprite.WidthInPX, sprite.HeightInPX));
+        if (DebugSettings.c_debugDrawBoxesAroundSprites) DrawRectangle(Color.Blue, new Rectangle(x, y, sprite.WidthInPX, sprite.HeightInPX));
 
         int bufferOffset = c_offsetToMoveToNextRasterLine * y + x * c_bytesPerPixel;
 
@@ -351,7 +356,7 @@ public class VideoDisplay
                         *(pPixel /*+ c_offsetBlueChannel*/) = thisPixel.B;  // blue offset is always 0, so we don't need to include it +0.
                         *(pPixel + c_offsetGreenChannel) = thisPixel.G;
                         *(pPixel + c_offsetRedChannel) = thisPixel.R;
-                        *(pPixel + c_offsetAlphaChannel) = 255; // thisPixel.A; // alpha is always 255, set by .ClearDisplay()
+                        *(pPixel + c_offsetAlphaChannel) = alpha; // thisPixel.A; // alpha is always 255, set by .ClearDisplay()
                     }
                 }
             }
@@ -367,7 +372,7 @@ public class VideoDisplay
     public unsafe void DrawShield(Sprite sprite, int x, int y)
     {
         // debugging? Show a box around the sprite (before drawing it)
-        if (c_drawBoxesAroundSprites) DrawRectangle(Color.Blue, new Rectangle(x, y, sprite.WidthInPX, sprite.HeightInPX));
+        if (DebugSettings.c_debugDrawBoxesAroundSprites) DrawRectangle(Color.Blue, new Rectangle(x, y, sprite.WidthInPX, sprite.HeightInPX));
 
         int bufferOffset = c_offsetToMoveToNextRasterLine * y + x * c_bytesPerPixel;
 
@@ -408,12 +413,12 @@ public class VideoDisplay
     /// <param name="x"></param>
     /// <param name="y"></param>
     /// <returns></returns>
-    public unsafe bool DrawSpriteWithCollisionDetection(Sprite sprite, int x, int y)
+    public unsafe bool DrawSpriteWithCollisionDetection(Sprite sprite, int x, int y, byte alpha = 255)
     {
         bool hit = false;
 
         // debugging? Show a box around the sprite (before drawing it). To avoid breaking the collision detection, we draw the box in blue that it cannot detect.
-        if (c_drawBoxesAroundSprites) DrawRectangle(Color.Blue, new Rectangle(x, y, sprite.WidthInPX, sprite.HeightInPX));
+        if (DebugSettings.c_debugDrawBoxesAroundSprites) DrawRectangle(Color.Blue, new Rectangle(x, y, sprite.WidthInPX, sprite.HeightInPX));
 
         int bufferOffset = c_offsetToMoveToNextRasterLine * y + x * c_bytesPerPixel; // top left corner of the sprite in the back buffer
 
@@ -438,7 +443,7 @@ public class VideoDisplay
                         *(pPixel /*+ c_offsetBlueChannel*/) = colour.B; // blue offset is always 0, so we don't need to include it +0.
                         *(pPixel + c_offsetGreenChannel) = colour.G;
                         *(pPixel + c_offsetRedChannel) = colour.R;
-                        *(pPixel + c_offsetAlphaChannel) = 255; // colour.A; // alpha is always 255, set by .ClearDisplay() - this saves updating 1 byte per pixel (performance)
+                        *(pPixel + c_offsetAlphaChannel) = alpha; // colour.A; // alpha is always 255, set by .ClearDisplay() - this saves updating 1 byte per pixel (performance)
                     }
                 }
 
@@ -484,7 +489,7 @@ public class VideoDisplay
         }
 
         // after erasing, if debugging, draw a box around the sprite (after erasing it). To avoid breaking the collision detection, we draw the box in blue that it cannot subsequently detect.
-        if (c_drawBoxesAroundSprites) DrawRectangle(Color.Blue, new Rectangle(x, y, sprite.WidthInPX, sprite.HeightInPX));
+        if (DebugSettings.c_debugDrawBoxesAroundSprites) DrawRectangle(Color.Blue, new Rectangle(x, y, sprite.WidthInPX, sprite.HeightInPX));
     }
 
     /// <summary>
@@ -504,7 +509,7 @@ public class VideoDisplay
 
         foreach (char c in text)
         {
-            Sprite s = OriginalSpritesFrom1978.Sprites[c.ToString()];
+            Sprite s = OriginalSpritesFrom1978.Get(c.ToString());
 
             DrawSprite(s, x, y);
 
@@ -572,7 +577,8 @@ public class VideoDisplay
     {
         // quarter the size of the video for the AI
         // 224 x 256 -> 56 x 64
-        double[] AIscreen = new double[56 * 64]; // AI needs doubles, not bytes
+        // 32 pixels at top with score, and 32 pixels at bottom with lives, so we can exclude those
+        double[] AIScreen = new double[56 * (64 - 16)]; // AI needs doubles, not bytes
 
         // we compute these OUTSIDE the loop , as they're constant
         const int twoPX = c_bytesPerPixel + c_bytesPerPixel;
@@ -599,9 +605,10 @@ public class VideoDisplay
 
         fixed (byte* pBuffer = BackBuffer)
         {
-            byte* pPixel = pBuffer + c_offsetGreenChannel; // we're ONLY looking at green channel (as it includes white, and green)
+            // 56x8x4 = top score to skip [224 pixels per row, 8 rows x 4 row chunks x 4 bytes per pixel]
+            byte* pPixel = pBuffer + c_offsetGreenChannel + 224 * 8 * 4 * 4; // we're ONLY looking at green channel (as it includes white, and green)
 
-            for (int aiBufferIndex = 0; aiBufferIndex < AIscreen.Length; aiBufferIndex++)
+            for (int aiBufferIndex = 0; aiBufferIndex < AIScreen.Length; aiBufferIndex++)
             {
                 // This may seem strange, but there is method in the madness. We don't need to check EVERY pixel if we find an illuminated pixel.
                 // By using "||" and short-circuiting, we can avoid checking for any more pixels in the 4x4 block.
@@ -630,7 +637,7 @@ public class VideoDisplay
                     (*(pPixel + threeRasterLines + twoPX) > 0) ||
                     (*(pPixel + threeRasterLines + threePX) > 0);
 
-                AIscreen[aiBufferIndex] = (hit ? 1 : 0);  // 1 if pixel illuminated in 4x4 block, 0 if not
+                AIScreen[aiBufferIndex] = (hit ? 1 : 0);  // 1 if pixel illuminated in 4x4 block, 0 if not
 
                 pPixel += fourPX; // move to the next 4x4 block
 
@@ -640,33 +647,32 @@ public class VideoDisplay
             }
         }
 
-        // scores are draw (see ScoreBoard.cs) @ 24,16 (characters are 8 pixels high). Each shrunk "row" is for 4 x 4px. 6x4=24
-        for (int i = 0; i < 56 * 6; i++) AIscreen[i] = 0; // clear the score and high score. The latter mucks up the AI learning. TODO: make it 56x(64-6) i.e. 56x58 - this reduces neuron inputs
-
+        // SonarQube doesn't like this. However, I don't want to add some "if()" mapped to a const. It makes more sense to comment it
+        // out, and leave it as a reminder of what the code is doing.
         // uncomment the lines below to see the video screen in debug Output as the AI sees it
 
-        // Debug.WriteLine(VideoShrunkForAIOutputAsText(AIscreen));
+        // Debug.WriteLine(VideoShrunkForAIOutputAsText(AIScreen));
         // Debugger.Break();
 
-        return AIscreen;
+        return AIScreen;
     }
 
     /// <summary>
     /// It's nice to be able to check the video screen is correct. So this reverses the process of VideoShrunkForAI(),
     /// providing a text-based representation of the video screen.
     /// </summary>
-    /// <param name="AIscreen"></param>
+    /// <param name="AIScreen"></param>
     /// <returns></returns>
-    public static string VideoShrunkForAIOutputAsText(double[] AIscreen)
+    public static string VideoShrunkForAIOutputAsText(double[] AIScreen)
     {
         // quarter the size of the video for the AI
         // 224 x 256 -> 56 x 64
 
         StringBuilder outputAsText = new();
 
-        for (int pixelIndex = 0; pixelIndex < AIscreen.Length; pixelIndex++)
+        for (int pixelIndex = 0; pixelIndex < AIScreen.Length; pixelIndex++)
         {
-            outputAsText.Append(AIscreen[pixelIndex] == 1 ? "█" : " ");
+            outputAsText.Append(AIScreen[pixelIndex] == 1 ? "█" : " ");
 
             // are we at the end of the raster line? If so, add a new line
             if ((pixelIndex + 1) % 56 == 0 && pixelIndex != 0) outputAsText.AppendLine();
@@ -679,9 +685,9 @@ public class VideoDisplay
     /// This creates an image overlay of screen display size, based on the low-resolution that the AI sees.
     /// It's intentionally semi-transparent, so you can see the 4x4 pixel degradation.
     /// </summary>
-    /// <param name="AIscreen"></param>
+    /// <param name="AIScreen"></param>
     /// <returns></returns>
-    public static Bitmap VideoShrunkForOverlay(double[] AIscreen)
+    public static Bitmap VideoShrunkForOverlay(double[] AIScreen)
     {
         // quarter the size of the video for the AI
         // 224 x 256 -> 56 x 64
@@ -698,12 +704,15 @@ public class VideoDisplay
         //    ████
 
         int x = 0;
-        int y = 0;
+        int y = 8*4; // top 32 pixel rows are score, nothing to overlay. .Length will ensure bottom 32 pixel rows are not plotted
 
         // array is 56 x 64, representing the low res screen. Every 56 pixels is a new row.
-        for (int i = 0; i < AIscreen.Length; i++)
+        for (int i = 0; i < AIScreen.Length; i++)
         {
-            if (AIscreen[i] == 1) graphics.FillRectangle(brushForOverlay, x, y, 4, 4); // 1= white, 0 = black
+            if (AIScreen[i] == 1)
+            {
+                graphics.FillRectangle(DebugSettings.s_brushForOverlay, x, y, 4, 4); // 1= white, 0 = black
+            }
 
             // wrap to next row. Lesson learnt using modulo, it works best if you remember +1
             // (otherwise it mucks up the first row and everything is then misaligned)
@@ -772,7 +781,7 @@ public class VideoDisplay
     /// Draws a rectangle on the back buffer, in the specified colour.
     /// </summary>
     /// <param name="colour"></param>
-    /// <param name="rectangle"></param>
+    /// <param name="point"></param>
     public void SetPixel(Color colour, Point point)
     {
         int offsetInBackBuffer = point.X * c_bytesPerPixel + point.Y * c_offsetToMoveToNextRasterLine;
@@ -784,10 +793,9 @@ public class VideoDisplay
     }
 
     /// <summary>
-    /// Get pixel from the back buffer.
+    /// Get colour of the pixel at the specified point from the back buffer.
     /// </summary>
-    /// <param name="colour"></param>
-    /// <param name="rectangle"></param>
+    /// <param name="point"></param>
     public Color GetPixel(Point point)
     {
         int offsetInBackBuffer = point.X * c_bytesPerPixel + point.Y * c_offsetToMoveToNextRasterLine;
@@ -798,5 +806,98 @@ public class VideoDisplay
                         BackBuffer[offsetInBackBuffer + c_offsetGreenChannel],
                         BackBuffer[offsetInBackBuffer /*+ c_offsetBlueChannel*/]);
         return colour;
+    }
+
+    /// <summary>
+    /// This translates the 1978 Space Invader screen address and byte into a pixel on the screen.
+    /// </summary>
+    /// <param name="address"></param>
+    /// <param name="byteOfData"></param>
+    public void DrawByte(int address, int byteOfData)
+    {
+        Point addressAsPoint = AddressToXY(address);
+
+        // for each bit in the byte, draw a pixel.
+        for (int i = 0; i < 8; i++)
+        {
+            int bit = (byteOfData >> i) & 1;
+
+            // if the bit is set, draw a pixel.
+            if (bit == 1)
+            {
+                SetPixel(Color.White, new Point(addressAsPoint.X, addressAsPoint.Y - (7 - i))); // 0 (lsb) is the right most pixel, on the original screen (non rotated)
+            }
+        }
+    }
+
+    /// <summary>
+    /// Maps an address to an X and Y coordinate (screen is 2400-3fff in Space Invaders).
+    /// </summary>
+    /// <param name="address"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    public static Point AddressToXY(int address)
+    {
+        if (address < 0x2400 || address > 0x3FFF) throw new ArgumentOutOfRangeException(nameof(address), "Invalid address - it is not within the screen");
+
+        // in the original 2400...3fe0 step 32 is the raster lines (y). But we're drawing it rotated 90 degrees.
+        int x = (address - 0x2400) / 32;
+
+        // 8 pixels per byte, address $2400 is bottom left, $241f is top left, bytes are draw upwards, so we need to work out the X and Y
+        int y = 255 - (((address - 0x2400) - x * 32) * 8);
+
+        return new Point(x, y);
+    }
+
+    /// <summary>
+    /// Implementation of the original Space Invaders screen drawing routine ConvToScr @ 1A47.
+    /// I really don't understand WHY the original code was implemented this way. Storing a real x,y makes more sense.
+    /// Please let me know if you know why it was done this way.
+    /// </summary>
+    /// <param name="H"></param>
+    /// <param name="L"></param>
+    /// <returns>HL</returns>
+    public static int ConvToScr(int H, int L)
+    {
+        /*
+        ConvToScr:
+        ; The screen is organized as one - bit - per - pixel.
+        ; In: HL contains pixel number(bbbbbbbbbbbbbppp)
+        ; Convert from pixel number to screen coordinates(without shift)
+        ; Shift HL right 3 bits(clearing the top 2 bits)
+        ; and set the third bit from the left.
+
+            1A48: 06 03           LD      B,$03 ; 3 shifts(divide by 8)
+            1A4A: 7C              LD      A,H   ; H to A
+            1A4B: 1F              RRA           ; Shift right(into carry, from doesn't matter)
+            1A4C: 67              LD      H, A  ; Back to H
+            1A4D: 7D              LD      A, L  ; L to A
+            1A4E: 1F              RRA           ; Shift right(from/ to carry)
+            1A4F: 6F              LD      L, A  ; Back to L
+            1A50: 05              DEC     B     ; Do all ...
+            1A51: C2 4A 1A        JP      NZ,$1A4A ; ... 3 shifts
+            1A54: 7C              LD      A,H   ; H to A
+            1A55: E6 3F           AND     $3F   ; Mask off all but screen(less than or equal 3F)
+            1A57: F6 20           OR      $20   ; Offset into RAM
+            1A59: 67              LD      H, A  ; Back to H
+        */
+        
+        int HL = (H << 8) | L;  // HL = H * 256 + L (lsb, msb)
+        int b = 3;
+
+        // Do a /2, 3 times
+        for(int i = 0; i < b; i++)
+        {
+            HL >>= 1; // 2
+        }
+        
+        H = HL / 256;
+        L = HL % 256;
+        
+        H &= 0x3F;
+        H |= 0x20;
+        
+        // return HL reconstructed
+        return (H << 8) | L;
     }
 }

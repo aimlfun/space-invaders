@@ -1,15 +1,7 @@
 ﻿// I hate using #define, but we need PERFORMANCE, and I don't know that JIT will avoid an empty method call.
 //#define DebugCell
-using SpaceInvadersAI.AI;
 using SpaceInvadersAI.AI.Cells;
 using SpaceInvadersAI.AI.Utilities;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static System.Windows.Forms.AxHost;
 
 namespace SpaceInvadersAI.AI.ExternalInterface;
 
@@ -97,7 +89,7 @@ internal class BrainOutput
             // We don't add any Bias, or have a threshold, because it's shared across networks.
             foreach (NeuralNetwork neuralNetwork in BrainItBelongsTo.Networks.Values)
             {
-                if (neuralNetwork.Outputs.TryGetValue(Id, out OUTPUTCell? value))
+                if (neuralNetwork.Outputs.TryGetValue(Id, out OutputCell? value))
                 {
                     State += value.Activation;
                 }

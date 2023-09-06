@@ -1,5 +1,4 @@
-﻿using SpaceInvadersAI.AI;
-using SpaceInvadersAI.Learning.AIPlayerAndController;
+﻿using SpaceInvadersAI.Learning.AIPlayerAndController;
 using SpaceInvadersAI.Learning.Configuration;
 using SpaceInvadersAI.AI.Cells;
 using SpaceInvadersAI.AI.ExternalInterface;
@@ -52,12 +51,12 @@ internal class Brain : IDisposable
     /// <summary>
     /// Unique identifier for the brain.
     /// </summary>
-    internal int Id = -9999;
+    internal int Id;
 
     /// <summary>
     /// List of allowed activation functions for this brain during creation or mutation. This is configured in the UI.
     /// </summary>
-    internal ActivationFunction[] AllowedActivationFunctions = new[] { ActivationFunction.TanH }; // default
+    internal ActivationFunction[] AllowedActivationFunctions;
 
     /// <summary>
     /// Contains the INPUTs of the brain, keyed by identifier.
@@ -192,14 +191,14 @@ internal class Brain : IDisposable
     {
         get
         {
-            string dna = "";
+            StringBuilder dna = new();
             
             foreach(NeuralNetwork n in Networks.Values)
             {
-                dna += n.DNA.GetHashCode() + "~";
+                dna.Append(n.DNA.GetHashCode() + "~");
             }
 
-            return dna.TrimEnd('~');
+            return dna.ToString().TrimEnd('~');
         }
     }
     /// <summary>
@@ -266,7 +265,7 @@ internal class Brain : IDisposable
     /// <param name="optionalNetworkIdentifiers">If provided will create networks with these identifier.</param>
     internal Brain(string brainName, ActivationFunction[] allowedActivationFunctions, string[]? inputParameters = null, string[]? outputParameters = null, string[]? optionalNetworkIdentifiers = null)
     {
-        Id = NextUniqueBrainID;
+        Id =  NextUniqueBrainID;
 
         Name = brainName;
         AllowedActivationFunctions = allowedActivationFunctions;
@@ -344,43 +343,37 @@ internal class Brain : IDisposable
         brainName ??= "unknown";
 
         string[] tokens = x.Split("\r\n");
-        int line = 0;
         Dictionary<string, List<string>> networkTemplateLines = new();
-
         string group = "";
 
-        while (line < tokens.Length)
+        foreach (string token in tokens)
         {
-            bool processed = false;
+            if (token.StartsWith('#')) continue;
 
-            if (tokens[line].StartsWith("#")) processed = true;
-
-            if (!processed && tokens[line].StartsWith("NAME "))
+            if (token.StartsWith("NAME "))
             {
-                brainName = tokens[line].Replace("NAME ", "") + " " + NextUniqueBrainID.ToString();
-                processed = true;
+                brainName = token.Replace("NAME ", "") + ' ' + UniqueBrainID.GetNextBrainId();
+                continue;
             }
 
-            if (!processed && tokens[line].StartsWith("START "))
+            if (token.StartsWith("START "))
             {
-                group = tokens[line].Split(" ")[1];
+                group = token.Split(' ')[1];
 
                 if (!networkTemplateLines.ContainsKey(group)) networkTemplateLines.Add(group, new());
-
-                processed = true;
+                continue;
             }
 
-            if (!processed && tokens[line].StartsWith("END "))
+            if (token.StartsWith("END "))
             {
-                string groupEnd = tokens[line].Split(" ")[1];
+                string groupEnd = token.Split(' ')[1];
 
-                if (group != groupEnd) throw new Exception("START doesn't match END");
-                processed = true;
+                if (group != groupEnd) throw new ApplicationException("START doesn't match END");
+
+                continue;
             }
 
-            if (!processed) networkTemplateLines[group].Add(tokens[line]);
-
-            line++;
+            networkTemplateLines[group].Add(token);
         }
 
         Brain brain = new(brainName, PersistentConfig.Settings.AllowedActivationFunctions)
@@ -388,15 +381,22 @@ internal class Brain : IDisposable
             AllowedCellTypes = PersistentConfig.Settings.CellTypeRatios
         };
 
-        // START INPUTS TO BRAIN 
-        foreach (string input in networkTemplateLines["INPUTS"])
-        {
-            // ADD BRAIN-IN ID="player-position-x" MIN="-1" MAX="1"
-            BrainInput brainInput = BrainInput.Deserialise(brain, input);
-            brain.BrainInputs.Add(brainInput.Id, brainInput);
-        }
-        // END INPUTS TO BRAIN
+        AddInputsToBrain(networkTemplateLines, brain);
+        AddOutputsToBrain(networkTemplateLines, brain);
 
+        // add the network(s)
+        NeuralNetwork.Deserialise(networkTemplateLines["NETWORKS"].ToArray(), brain);
+
+        return brain;
+    }
+
+    /// <summary>
+    /// Adds the outputs to the brain (based on the template).
+    /// </summary>
+    /// <param name="networkTemplateLines"></param>
+    /// <param name="brain"></param>
+    private static void AddOutputsToBrain(Dictionary<string, List<string>> networkTemplateLines, Brain brain)
+    {
         // START OUTPUTS TO BRAIN
         foreach (string output in networkTemplateLines["OUTPUTS"])
         {
@@ -405,11 +405,23 @@ internal class Brain : IDisposable
             brain.BrainOutputs.Add(brainOutput.Id, brainOutput);
         }
         // END BRAIN OUTPUTS
+    }
 
-        // add the network(s)
-        NeuralNetwork.Deserialise(networkTemplateLines["NETWORKS"].ToArray(), brain);
-
-        return brain;
+    /// <summary>
+    /// Adds the inputs to the brain (based on the template).
+    /// </summary>
+    /// <param name="networkTemplateLines"></param>
+    /// <param name="brain"></param>
+    private static void AddInputsToBrain(Dictionary<string, List<string>> networkTemplateLines, Brain brain)
+    {
+        // START INPUTS TO BRAIN 
+        foreach (string input in networkTemplateLines["INPUTS"])
+        {
+            // ADD BRAIN-IN ID="player-position-x" MIN="-1" MAX="1"
+            BrainInput brainInput = BrainInput.Deserialise(brain, input);
+            brain.BrainInputs.Add(brainInput.Id, brainInput);
+        }
+        // END INPUTS TO BRAIN
     }
 
     /// <summary>
@@ -440,7 +452,7 @@ internal class Brain : IDisposable
             }
         }
 
-        AIPlayer.Dispose();
+        AIPlayer?.Dispose();
         AIPlayer = null;
     }
     #endregion

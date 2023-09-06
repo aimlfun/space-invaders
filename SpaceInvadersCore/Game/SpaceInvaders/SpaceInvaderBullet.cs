@@ -1,6 +1,4 @@
-﻿using SpaceInvadersCore;
-using SpaceInvadersCore.Game;
-using System.Drawing;
+﻿using System.Drawing;
 
 namespace SpaceInvadersCore.Game.SpaceInvaders
 {
@@ -9,6 +7,8 @@ namespace SpaceInvadersCore.Game.SpaceInvaders
     /// </summary>
     internal class SpaceInvaderBulletBase
     {
+        internal enum BulletState { normalMovement, explosionInProgress, dead };
+
         //   ███    █   █   █   █     █     ████    █████   ████            ████    █   █   █       █       █████   █████    ███
         //    █     █   █   █   █    █ █    █   █   █       █   █           █   █   █   █   █       █       █         █     █   █
         //    █     ██  █   █   █   █   █   █   █   █       █   █           █   █   █   █   █       █       █         █     █
@@ -18,26 +18,26 @@ namespace SpaceInvadersCore.Game.SpaceInvaders
         //   ███    █   █     █     █   █   ████    █████   █   █           ████     ███    █████   █████   █████     █      ███
 
         // 
-        //    Plunger   Rolling   Squiggly
+        //    Plunger   Rolling   Squiggly   AShotExplo
         //    
-        //       █         █         █ 
-        //       █         █          █ 
-        //       █        ██           █
-        //      ███        ██         █ 
-        //       █         █         █ 
-        //       █        ██          █ 
-        //                 ██          █ 
-        //                 
+        //       █         █         █          █ 
+        //       █         █          █       █   █ 
+        //       █        ██           █        ██ █
+        //      ███        ██         █        ████ 
+        //       █         █         █        █ ███ 
+        //       █        ██          █        █████
+        //                 ██          █      █ ███ 
+        //                                     █ █ █
 
         /// <summary>
-        /// Set this to aid debugging bullet hitboxes.
+        /// Indicates whether the bullet is moving or exploding (or dead).
         /// </summary>
-        internal const bool c_showHitBox = false;
+        internal BulletState State;
 
         /// <summary>
-        /// Indicates whether the bullet is dead.
+        /// When it reaches the bottom, it explodes. This timer determines how long it is visible for.
         /// </summary>
-        internal bool IsDead = false;
+        internal int BulletExplodeTimer;
 
         /// <summary>
         /// Indicates when the bullet has hit something (collision detection drawing sprite).
@@ -100,6 +100,8 @@ namespace SpaceInvadersCore.Game.SpaceInvaders
             LastPosition= new Point(0, 0); // prevents erasing the bullet before it moves; it is only drawn after moving.
 
             this.frames = frames;
+            State = BulletState.normalMovement;
+            BulletExplodeTimer = 4;
         }
 
         /// <summary>
@@ -107,17 +109,28 @@ namespace SpaceInvadersCore.Game.SpaceInvaders
         /// </summary>
         internal virtual bool DrawSprite()
         {
-            if (IsDead) return false; // dead sprites/bullets should not be drawn!
-
             LastPosition = Position;
-            frameOfImage = (frameOfImage + 1) % 4; // step thru the frames of animation
-            lastFrameDrawn = frameOfImage; // store so we can erase it later
 
-#pragma warning disable CS0162 // Unreachable code detected
-            if (c_showHitBox) videoScreen.DrawRectangle(Color.Blue, HitBox());
-#pragma warning restore CS0162 // Unreachable code detected
+            switch (State)
+            {
+                case BulletState.normalMovement:
+                    frameOfImage = (frameOfImage + 1) % 4; // step thru the frames of animation
+                    lastFrameDrawn = frameOfImage; // store so we can erase it later
 
-            BulletHitSomething = videoScreen.DrawSpriteWithCollisionDetection(OriginalSpritesFrom1978.Sprites[frames[frameOfImage]], Position.X - 1, Position.Y - 3);
+                    if (DebugSettings.c_debugSpaceInvaderBulletDrawHitBox) videoScreen.DrawRectangle(Color.Blue, HitBox());
+
+                    BulletHitSomething = videoScreen.DrawSpriteWithCollisionDetection(OriginalSpritesFrom1978.Get(frames[frameOfImage]), Position.X - 1, Position.Y - 3);
+                    break;
+
+                case BulletState.explosionInProgress:
+                    videoScreen.DrawSprite(OriginalSpritesFrom1978.Get("AShotExplo"), Position.X - 2, Position.Y - 3, 255);
+                    BulletHitSomething = false;
+                    break;
+
+                case BulletState.dead:
+                    BulletHitSomething = false; // dead sprites/bullets should not be drawn!
+                    break;
+            }
 
             return BulletHitSomething; // return true if sprite collided with something
         }
@@ -130,13 +143,36 @@ namespace SpaceInvadersCore.Game.SpaceInvaders
         {
             EraseSprite();
 
-            if (IsDead) return;
+            if (State == BulletState.explosionInProgress && BulletExplodeTimer-- == 0)
+            {
+                State = BulletState.dead;
+            }
 
-            // The normal delta Y for the shots is a constant 4 pixels down per step. 
+            if (State != SpaceInvaderBulletBase.BulletState.normalMovement) return;
+
+            /*
+              SpeedShots:
+                ; With less than 9 aliens on the screen the alien shots get a tad bit faster. Probably
+                ; because the advancing rack can catch them.
+                
+                08D8: 3A 82 20        LD      A,(numAliens)       ; Number of aliens on screen
+                08DB: FE 09           CP      $09                 ; More than 8?
+                08DD: D0              RET     NC                  ; Yes ... leave shot speed alone [CP $09 sets carry flag if A >= $09]
+                08DE: 3E FB           LD      A,$FB               ; Normally FF (-4) ... now FB (-5)
+                08E0: 32 7E 20        LD      (alienShotDelta),A  ; Speed up alien shots
+                08E3: C9              RET                         ; Done
+             */
+
+            // The disassembly contradicts itself in the attribute definitions, it says...
+            // @ $207E	alienShotDelta	Alien shot speed. Normally -1 but set to -4 with less than 9 aliens
+
+            // The normal delta Y for the shots is a constant 4 pixels down per step.
+            // The "-4"/"-5" above is because Cartesian (0,0) the invader screen uses, is bottom right and ours is top left
 
             // But when there are 8 or fewer aliens on the screen the delta changes up
             // to 5 pixels per step (5*60/3 = 100 pixels per second).
-            Position.Y += SpaceInvadersRemaining < 8 ? 5 : 4;
+
+            Position.Y += SpaceInvadersRemaining >= 9 ? 4 : 5; // corrected on 22 May 23, to be "9" not 8.       
 
             ++Steps;
         }
@@ -147,7 +183,7 @@ namespace SpaceInvadersCore.Game.SpaceInvaders
         /// <returns></returns>
         protected virtual Rectangle HitBox()
         {
-            throw new Exception("override this method");
+            throw new ApplicationException("override this method");
         }
 
         /// <summary>
@@ -157,9 +193,10 @@ namespace SpaceInvadersCore.Game.SpaceInvaders
         /// <returns></returns>
         internal bool BulletHit(Point bulletLocation)
         {
-            if (IsDead) return false; // dead bullet don't hit anything.
+            if (State == SpaceInvaderBulletBase.BulletState.dead) return false; // dead bullet don't hit anything.
 
             Rectangle hitbox = HitBox();
+
             return hitbox.Contains(new Point(bulletLocation.X, bulletLocation.Y + 2)) || hitbox.Contains(new Point(bulletLocation.X, bulletLocation.Y + 5));
         }
 
@@ -170,11 +207,21 @@ namespace SpaceInvadersCore.Game.SpaceInvaders
         {
             if (LastPosition.Y == 0) return; // nothing to erase
 
-#pragma warning disable CS0162 // Unreachable code detected
-            if (c_showHitBox) videoScreen.DrawRectangle(Color.Black, HitBox());
-#pragma warning restore CS0162 // Unreachable code detected
+            if (DebugSettings.c_debugSpaceInvaderBulletDrawHitBox) videoScreen.DrawRectangle(Color.Black, HitBox());
 
-            videoScreen.EraseSprite(OriginalSpritesFrom1978.Sprites[frames[lastFrameDrawn]], LastPosition.X - 1, LastPosition.Y - 3);
+            switch (State)
+            {
+                case BulletState.normalMovement:
+                    videoScreen.EraseSprite(OriginalSpritesFrom1978.Get(frames[lastFrameDrawn]), LastPosition.X - 1, LastPosition.Y - 3);
+                    break;
+
+                case BulletState.explosionInProgress:
+                    videoScreen.EraseSprite(OriginalSpritesFrom1978.Get("AShotExplo"), Position.X - 2, Position.Y - 3);
+                    break;
+
+                case BulletState.dead:
+                    break;
+            }
         }
 
         /// <summary>

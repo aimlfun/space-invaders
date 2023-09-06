@@ -16,19 +16,11 @@ public static class OriginalSpritesFrom1978
     //    █         █    █      █   █               █   █       █ █       █       █     █           █
     //    █        █     █      █   █           █   █   █       █  █      █       █     █       █   █
     //   ███    ███      █       ███             ███    █       █   █    ███      █     █████    ███
-    
+
     /// <summary>
     /// Contains sprites that are used in the game, indexed by a name.
     /// </summary>
-    public static readonly Dictionary<string, Sprite> Sprites;
-
-    /// <summary>
-    /// Static Constructor. Registers all the sprites.
-    /// </summary>
-    static OriginalSpritesFrom1978()
-    {        
-        // "@hex" is the offset in the EPROM where the sprite is stored.
-        Sprites = new()
+    private static readonly Dictionary<string, Sprite> sprites = new()
         {
             { "AlienSprCYA", new Sprite(8, "00 03 04 78 14 13 08 1A 3D 68 FC FC 68 3D 1A 00" ) }, // @1BA0
             { "AlienSprCYB", new Sprite(8, "00 00 03 04 78 14 0B 19 3A 6D FA FA 6D 3A 19 00" ) }, // @1BD0
@@ -136,17 +128,24 @@ public static class OriginalSpritesFrom1978
             { "?", new Sprite(8,"00 20 40 4D 50 20 00 00") },
             { "-", new Sprite(8,"00 08 08 08 08 08 00 00") }
         };
-    }
+
+
+    /// <summary>
+    /// Returns a sprite.
+    /// </summary>
+    /// <param name="spriteName"></param>
+    /// <returns></returns>
+    internal static Sprite Get(string spriteName) => sprites[spriteName];
 
     /// <summary>
     /// Outputs all the registered sprites to the debug output.
     /// </summary>
     internal static void DumpSprites()
     {
-        foreach (string name in Sprites.Keys)
+        foreach (string name in sprites.Keys)
         {
             Debug.WriteLine(name);
-            Debug.WriteLine(Sprites[name]);
+            Debug.WriteLine(sprites[name]);
         }
     }
 
@@ -157,7 +156,7 @@ public static class OriginalSpritesFrom1978
     /// <returns></returns>
     private static string[] SpritePixelsByRow(char c)
     {
-        Sprite sprite = OriginalSpritesFrom1978.Sprites[c.ToString()];
+        Sprite sprite = OriginalSpritesFrom1978.sprites[c.ToString()];
 
         List<string> sb = new();
 
@@ -188,7 +187,7 @@ public static class OriginalSpritesFrom1978
         foreach (char c in text)
         {
             // if the character is not in the font, we'll just skip it. What else did you expect?
-            if (OriginalSpritesFrom1978.Sprites.ContainsKey(c.ToString())) lines.Add(SpritePixelsByRow(c));
+            if (OriginalSpritesFrom1978.sprites.ContainsKey(c.ToString())) lines.Add(SpritePixelsByRow(c));
         }
 
         int heightInPX = lines[0].Length;

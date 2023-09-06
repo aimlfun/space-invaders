@@ -1,5 +1,4 @@
-﻿using SpaceInvadersCore;
-using SpaceInvadersCore.Game;
+﻿using System.Diagnostics;
 using System.Drawing;
 
 namespace SpaceInvadersCore.Game.Player;
@@ -30,22 +29,18 @@ internal class PlayerShip
     /// <summary>
     /// Dimensions of the player sprite.
     /// </summary>
-    internal static Size Dimensions = new()
+    internal readonly static Size Dimensions = new()
     {
-        Width = 16,
+        Width = 16,  // [$10] @ $201C	plyrSprSiz	Player sprite descriptor ... size of sprite
         Height = 8
     };
 
-    /// <summary>
-    /// Debugging. Shows the hit box for the player.
-    /// </summary>
-    private const bool c_showHitBox = false;
-
+    
     /// <summary>
     /// Until this reaches zero, the player does not appear.
     /// </summary>
-    internal byte PlayerWaitTimer = 120;
-    
+    internal byte PlayerWaitTimer = 128; // should be "128", from disassembly: @2011 obj0TimerLSB	Wait 128 interrupts (about 2 secs) before player task starts
+
     /// <summary>
     /// Returns true if the player is ready to move (and visible).
     /// </summary>
@@ -95,7 +90,7 @@ internal class PlayerShip
     {
         get
         {
-            if(playerBullet == null) throw new Exception("No bullet in flight.");
+            if(playerBullet == null) throw new ApplicationException("No bullet in flight.");
 
             return playerBullet.Position;
         }
@@ -107,8 +102,9 @@ internal class PlayerShip
     /// <param name="screen"></param>
     internal PlayerShip(VideoDisplay screen)
     {
-        Position.X = Dimensions.Width / 2 + 1; // player starts on the left of screen.
-        Position.Y = OriginalDataFrom1978.c_yOfBaseLineAboveWhichThePlayerShipIsDrawnPX; // player position vertically is fixed
+        // why plus 8? The values in "OriginalDataFrom1978" are the left edge of the sprite.
+        Position.X = OriginalDataFrom1978.s_PlayerShipStartLocation.X + 8; // player starts on the left of screen... 
+        Position.Y = OriginalDataFrom1978.s_PlayerShipStartLocation.Y; // player position vertically is fixed
         
         videoScreen = screen; // save reference to video display object
     }
@@ -126,11 +122,44 @@ internal class PlayerShip
 
         int widthDiv2 = Dimensions.Width / 2;
 
-        // stop player moving off screen
-        if (Position.X - widthDiv2 + XDirection < 1) return;
-        if (Position.X + widthDiv2 + XDirection > OriginalDataFrom1978.c_screenWidthPX - 2) return;
+        // Original X is the left of the sprite, ours is the centre.
+        // we thus need to subtract half the width of the sprite to get the left edge.
+        int xAsPerOriginalIncludingAmountToMove = Position.X - widthDiv2 + XDirection; // - 8 
 
-        Position.X += XDirection;
+        // stop player moving off screen
+
+        // 
+        // 034A: 3A 1B 20        LD      A,(playerXr)        ; Current player coordinates
+        // 034D: 47              LD      B, A                ; Hold it
+
+        // ; Handle player moving right
+        // 0381: 78              LD      A,B                 ; Player coordinate
+        // 0382: FE D9           CP      $D9                 ; At right edge?
+        // 0384: CA 6F 03        JP      Z,$036F             ; Yes ... ignore this
+        // 0387: 3C              INC     A                   ; Bump X coordinate
+        // 0388: 32 1B 20        LD      (playerXr),A        ; New X coordinate
+        // 038B: C3 6F 03        JP      $036F               ; Draw player and out
+
+        // I am curious about the above..
+        // The ship is 16 pixels wide, so 223 - 16 = 207.
+        // So if the left is capped at 16, then the right should be capped at 207. The asymmetry is odd. Could I have made a mistake?
+        // I would use: 223 - Dimensions.Width - 3;
+        int maxRight = 191; // the computed value is 185, but 191 seems to be what the game uses.
+
+        // ; Handle player moving left
+        // 038E: 78              LD      A,B                 ; Player coordinate
+        // 038F: FE 30           CP      $30                 ; At left edge
+        // 0391: CA 6F 03        JP      Z,$036F             ; Yes ... ignore this
+        // 0394: 3D              DEC     A                   ; Bump X coordinate
+        // 0395: 32 1B 20        LD      (playerXr),A        ; New X coordinate
+        // 0398: C3 6F 03        JP      $036F               ; Draw player and out
+
+        const int minLeft = 16; // I would use 3
+ 
+        if (xAsPerOriginalIncludingAmountToMove < minLeft ||
+            xAsPerOriginalIncludingAmountToMove > maxRight) return;
+
+        Position.X += XDirection; 
     }
 
     /// <summary>
@@ -151,20 +180,49 @@ internal class PlayerShip
     {
         if (playerBullet is null) return;
 
-        // rather than plot individual pixels, the original has a 8 pixel high sprite, of which half are set.
-        videoScreen.EraseSprite(OriginalSpritesFrom1978.Sprites["PlayerShotSpr"], playerBullet.Position.X, playerBullet.Position.Y - 2);
-
-        // bullet goes upwards
-        playerBullet.Position.Y -= OriginalDataFrom1978.c_playerBulletSpeedPX;
-
-        // if the bullet reaches the top, we cancel it (it hit nothing). Player can fire another afterwards.
-        if (playerBullet.Position.Y < OriginalDataFrom1978.c_verticalPointWherePlayerBulletsStopPX)
-        {
-            CancelBullet();
-        }
+        if (playerBullet.State == PlayerBullet.BulletState.explosionInProgress)
+            HandleBulletExplosion();
         else
         {
-            DrawBulletSprite();
+            // rather than plot individual pixels, the original has a 8 pixel high sprite, of which half are set.
+            playerBullet.EraseSprite(videoScreen);
+
+            // bullet goes upwards
+            playerBullet.Position.Y -= OriginalDataFrom1978.c_playerBulletSpeedPX;
+
+            // if the bullet reaches the top, we cancel it (it hit nothing). Player can fire another afterwards.
+            if (playerBullet.Position.Y < OriginalDataFrom1978.c_verticalPointWherePlayerBulletsStopPX)
+            {
+                ExplosionTime();
+            }
+        }
+
+        DrawBulletSprite();        
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    internal void ExplosionTime()
+    {
+        if (playerBullet is null) return;
+
+        playerBullet.State = PlayerBullet.BulletState.explosionInProgress;
+    }
+
+    /// <summary>
+    /// When the bullet hits the top of the screen, we draw an explosion, then pause for 16 frames (16*16.6ms = 266ms), then cancel the bullet.
+    /// Why did I bother implementing? This changes the game slightly, because it penalises the play for missing. They cannot fire for 266ms.
+    /// </summary>
+    private void HandleBulletExplosion()
+    {
+        Debug.Assert(playerBullet is not null);
+
+        // we'll cancel the bullet when the timer reaches zero.        
+        if (--playerBullet.BlowUpTimer <= 0)
+        {
+            // removal, destroy bullet.
+            CancelBullet();
         }
     }
 
@@ -178,7 +236,7 @@ internal class PlayerShip
         Rectangle hitbox = HitBox();
 
         // bullet has not reached ship vertically
-        if (alienBulletPosition.Y < hitbox.Top) return false;
+        if (alienBulletPosition.Y + 5 < hitbox.Top) return false;
 
         // bullet is left or right of ship.
         if (alienBulletPosition.X < hitbox.Left || alienBulletPosition.X > hitbox.Right) return false;
@@ -193,7 +251,7 @@ internal class PlayerShip
     /// <returns></returns>
     private Rectangle HitBox()
     {
-        return new Rectangle(Position.X - Dimensions.Width / 2 + 2, Position.Y - 7, Dimensions.Width-3, Dimensions.Height);
+        return new Rectangle(Position.X - Dimensions.Width / 2 + 2, Position.Y, Dimensions.Width-3, Dimensions.Height);
     }
 
     /// <summary>
@@ -201,6 +259,7 @@ internal class PlayerShip
     /// </summary>
     internal void CancelBullet()
     {
+        playerBullet?.EraseSprite(videoScreen);
         playerBullet = null;
     }
 
@@ -216,7 +275,7 @@ internal class PlayerShip
         if (!FireBulletRequested || BulletIsInMotion) return false;
 
         // creates the bullet
-        playerBullet = new PlayerBullet(Position.X, Position.Y - 9);
+        playerBullet = new PlayerBullet(Position.X, Position.Y - 4);
 
         // we have fired the bullet, cancel the request
         FireBulletRequested = false;
@@ -243,9 +302,7 @@ internal class PlayerShip
 
         if (PlayerWaitTimer > 0) return; // don't draw until timer is complete. When the game starts there is a pause before the player appears.
 
-#pragma warning disable CS0162 // Unreachable code detected
-        if (c_showHitBox) videoScreen.DrawRectangle(Color.Blue, HitBox());
-#pragma warning restore CS0162 // Unreachable code detected
+        if (DebugSettings.c_debugPlayerShipDrawHitBox) videoScreen.DrawRectangle(Color.Blue, HitBox());
 
         DrawPlayerSpriteAt(videoScreen, Position);
     }
@@ -260,13 +317,13 @@ internal class PlayerShip
 
     /// <summary>
     /// Draws the ship centred on the designated location. 
-    /// Used for the game, and the lives indicators.
+    /// Used for the player ship in the game, and the lives indicators.
     /// </summary>
     /// <param name="videoScreen"></param>
     /// <param name="position"></param>
     internal static void DrawPlayerSpriteAt(VideoDisplay videoScreen, Point position)
     {
-        videoScreen.DrawSprite(OriginalSpritesFrom1978.Sprites["Player"], position.X - Dimensions.Width / 2, position.Y - 7);
+        videoScreen.DrawSprite(OriginalSpritesFrom1978.Get("Player"), position.X - Dimensions.Width / 2, position.Y);
     }
 
     /// <summary>
@@ -278,9 +335,7 @@ internal class PlayerShip
     {
         ErasePlayerSpriteAt(videoScreen, Position);
 
-#pragma warning disable CS0162 // Unreachable code detected
-        if (c_showHitBox) videoScreen.DrawRectangle(Color.Black, HitBox());
-#pragma warning restore CS0162 // Unreachable code detected
+        if (DebugSettings.c_debugPlayerShipDrawHitBox) videoScreen.DrawRectangle(Color.Black, HitBox());
     }
 
     /// <summary>
@@ -290,6 +345,6 @@ internal class PlayerShip
     /// <param name="position"></param>
     internal static void ErasePlayerSpriteAt(VideoDisplay videoScreen, Point position)
     {
-        videoScreen.EraseSprite(OriginalSpritesFrom1978.Sprites["Player"], position.X - Dimensions.Width / 2, position.Y - 7);
+        videoScreen.EraseSprite(OriginalSpritesFrom1978.Get("Player"), position.X - Dimensions.Width / 2, position.Y);
     }
 }

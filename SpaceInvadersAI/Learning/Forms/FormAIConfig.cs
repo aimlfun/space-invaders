@@ -22,11 +22,11 @@ public partial class FormAIConfig : Form
     /// <summary>
     /// This is the file in which the invader config is stored (location is EXE runtime directory).
     /// </summary>
-    const string c_invadersConfig = "invaders-config.json";
+    const string c_invadersConfig = @"Config\ai-config.json";
 
     /// <summary>
     /// This is the file in which the scoring config is stored (location is EXE runtime directory)./// </summary>
-    const string c_invadersScore = "space-invaders-fitness-scoring.json";
+    const string c_invadersScore = @"Config\fitness-scoring.json";
 
     internal bool playGame = false;
 
@@ -46,7 +46,7 @@ public partial class FormAIConfig : Form
 
         RetrieveConfigAndPopulateUI();
         ComboBoxSelectionType_SelectedIndexChanged(null, null);
-  
+
         AddTemplatesToDropDown();
     }
 
@@ -62,7 +62,7 @@ public partial class FormAIConfig : Form
         // The training goes with the AI input/output method, but more to the point, get it mixed up makes the code fall over.
         // That's because the number of inputs and outputs is different.
         string prefix = GetTemplatePrefixBasedOnAIInputMethod() + " " + GetTemplatePrefixBasedOnAIOutputMethod() + " ";
-        IEnumerable<string> templates = Directory.EnumerateFiles(@".\Templates", prefix + "*.tem");
+        IEnumerable<string> templates = Directory.EnumerateFiles(@".\Templates", prefix + "*.ai");
         items.Add("-none selected-");
 
         foreach (string filename in templates)
@@ -72,7 +72,7 @@ public partial class FormAIConfig : Form
 
         // clear the combo boxes
         comboBoxListOfTemplates.Items.Clear();
-        
+
         // template drop down
         comboBoxListOfTemplates.Items.AddRange(items.ToArray());
 
@@ -266,7 +266,7 @@ public partial class FormAIConfig : Form
             LearningFramework.SelectionType.POWER => 0,
             LearningFramework.SelectionType.FITNESS_PROPORTIONATE => 1,
             LearningFramework.SelectionType.TOURNAMENT => 2,
-            _ => throw new Exception("unknown selection type in combo-box"),
+            _ => throw new ApplicationException("unknown selection type in combo-box"),
         };
 
         radioButtonRandomNeurons.Checked = PersistentConfig.Settings.CreatingARandomNetwork;
@@ -632,7 +632,7 @@ public partial class FormAIConfig : Form
             0 => LearningFramework.SelectionType.POWER,
             1 => LearningFramework.SelectionType.FITNESS_PROPORTIONATE,
             2 => LearningFramework.SelectionType.TOURNAMENT,
-            _ => throw new Exception("unknown selection type in combo-box"),
+            _ => throw new ApplicationException("unknown selection type in combo-box"),
         };
     }
 
@@ -818,6 +818,6 @@ public partial class FormAIConfig : Form
             MessageBox.Show("Changing the input/output method requires use of different brain templates.\n\nSelected templates for level rules have been reset.", "Space Invader AI - Information", MessageBoxButtons.OK);
         }
 
-        AddTemplatesToDropDown();       
+        AddTemplatesToDropDown();
     }
 }

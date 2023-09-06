@@ -1,8 +1,6 @@
 ﻿using SpaceInvadersAI.Learning.Configuration;
 using SpaceInvadersAI.AI;
 using System.Diagnostics;
-using SpaceInvadersAI.AI.Utilities;
-using System;
 using SpaceInvadersCore;
 
 namespace SpaceInvadersAI.Learning.AIPlayerAndController
@@ -30,7 +28,7 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
         /// <summary>
         /// Tracks the player in the "game".
         /// </summary>
-        internal static AIPlayer s_player;
+        internal static AIPlayer? s_player;
 
         /// <summary>
         /// Used as a protection against the timer firing multiple times in quick succession causing re-entrance.
@@ -41,6 +39,34 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
         /// Frame by frame moving / drawing by using a timer.
         /// </summary>
         internal static System.Windows.Forms.Timer s_timerMove = new();
+
+        /// <summary>
+        /// Indicates whether it is paused or not.
+        /// </summary>
+        private static bool s_isPaused = false;
+
+        /// <summary>
+        /// Get or set the "paused" status.
+        /// </summary>
+        internal static bool Paused
+        {
+            get
+            {
+                return s_isPaused;
+            }
+
+            set
+            {
+                if (s_isPaused == value) return; // no change
+
+                s_isPaused = value;
+
+                // "P" pauses the timer (and what's happening)
+                s_timerMove.Enabled = !s_isPaused; // fyi, all the MS code for these: ".Start() => Enabled = true;" etc.
+
+                Draw(); // force it to draw
+            }
+        }
 
         /// <summary>
         /// This is used to update the display in non quiet mode to show the game.
@@ -61,8 +87,11 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
 
             StopTimer();
 
-            s_timerMove.Interval = 10;
+            s_timerMove.Interval = 4;
             s_timerMove.Tick += TimerMove_Tick;
+
+            // the RADAR doesn't function unless the shields are drawn in alpha 252
+            DebugSettings.s_DrawShieldsIn252 = (Configuration.PersistentConfig.Settings.InputToAI == PersistentConfig.AIInputMode.radar);
 
             InitialisePlayer();
             s_timerMove.Start();
@@ -260,8 +289,14 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
         /// <param name="level"></param>
         private static void LoadBrainConfiguredForLevel(int level, int initialScore = -1)
         {
-            string levelFile = GetTemplateFileNameForLevel(level, s_player is null || s_player.gameController is null ? 0 : s_player.brainControllingPlayerShip.AIPlayer.gameController.Score, out int startScore);
+            string levelFile = GetTemplateFileNameForLevel(level, s_player is null || s_player.gameController is null || s_player.brainControllingPlayerShip.AIPlayer  is null ? 0 : s_player.brainControllingPlayerShip.AIPlayer.gameController.Score, out int startScore);
             Debug.WriteLine($"level: {level} filename: {levelFile}");
+
+            if(string.IsNullOrWhiteSpace(levelFile))
+            {
+                MessageBox.Show($"No AI file specified for {level}, using previous brain.");
+                return;
+            }
 
             Brain brain = Brain.CreateFromTemplate(File.ReadAllText(levelFile));
 
@@ -272,7 +307,7 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
 
             if (s_player is null)
             {
-                s_player = new AIPlayer(brain, 1);
+                s_player = new AIPlayer(brain, 1, true);
                 s_player.gameController.OnLevelChanged += GameController_OnLevelChanged;
             }
             else
@@ -285,7 +320,7 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
             // ensure that if the user asked for an initial score, we honour their request.
             if (initialScore != -1) startScore = initialScore;
 
-            s_player.gameController.AISetScore(startScore);
+            s_player?.gameController?.AISetScore(startScore);
         }
 
         /// <summary>
@@ -301,30 +336,25 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
         /// </summary>
         private static void TimerMove_Tick(object? sender, EventArgs e)
         {
+            Debug.Assert(s_player is not null);
+
             if (blockTick) return;
 
             blockTick = true;
 
-            // in visual mode, move and if none left move to next generation
+            // If .Move() returns false, then the game is over.
             if (!AIPlayController.Move())
             {
-                s_timerMove.Stop();
-
                 EndGame();
-
-                s_timerMove.Start();
-
-                blockTick = false;
-                return;
             }
             
+            // Move will set the game over flag if the game is over, we make sure the screen says "game over", but not start the timer. (Draw will show it)
             if(s_player.gameController.IsGameOver)
             {
-                s_timerMove.Stop(); // that ends everything moving
                 s_player.gameController.WriteGameOverToVideoScreen(); // last draw will include game over
             }
 
-            // paint
+            // paint the video screen
             Draw();
 
             blockTick = false;
@@ -345,6 +375,8 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
         /// <returns>True - able to move at least one player.</returns>
         internal static bool Move()
         {
+            Debug.Assert(s_player is not null);
+
             s_player.Move();
 
             return !s_player.IsDead;
@@ -355,6 +387,8 @@ namespace SpaceInvadersAI.Learning.AIPlayerAndController
         /// </summary>
         internal static void Draw()
         {
+            Debug.Assert(s_player is not null);
+
             // if we don't have an handler assigned, there is no point in drawing anything.
             if (UIThreadInterfaceForGameScreens is null)
             {

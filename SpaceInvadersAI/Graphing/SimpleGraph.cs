@@ -130,12 +130,19 @@ internal class SimpleGraph : IDisposable
     /// <summary>
     /// This is the bottom left X,Y of the graph.
     /// </summary>
-    internal static Point s_origin;
+    private static Point s_origin;
+
+    internal static Point Origin => s_origin;
 
     /// <summary>
     /// For every "generation" we move this many pixels to the right.
     /// </summary>
     internal static float s_xToGeneration;
+
+    /// <summary>
+    /// 
+    /// </summary>
+    internal static float XToGeneration => s_xToGeneration;
 
     /// <summary>
     /// Constructor. A rudimentary graph engine that renders to a Bitmap.
@@ -185,8 +192,7 @@ internal class SimpleGraph : IDisposable
         linesPen[^1].EndCap = LineCap.RoundAnchor;
         linesPen[^1].StartCap = LineCap.RoundAnchor;
 
-        // 500 points spaced out, until we have more than 500 points, then we use all points
-        numberOfDataPoints = dataset.Count;  //  Math.Max(numberOfDataPoints, dataset.Count <= 500 ? 500 : dataset.Count);
+        numberOfDataPoints = dataset.Count; 
 
         // Data varies in max (all start at 0), so we want to size the graph accordingly.
         // Having a vertical axis 0..10,000 won't work well for "100".
@@ -374,7 +380,7 @@ internal class SimpleGraph : IDisposable
     {
         // scale the data-points to fit on the graph
 
-        // TODO: it's a little inefficient, we should store the X scaling
+        // it's a little inefficient, we should store the X scaling...
         int xPos = (int)Math.Round(c_marginPXForLabels + x * (widthPX - c_marginPXForLabels * 2f) / numberOfDataPoints); // *2 because we have a margin on both sides (right for the value label)
         int yPos = (int)Math.Round(heightPX - c_marginPXForLabels - (float)y * yScale);
 

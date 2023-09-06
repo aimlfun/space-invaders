@@ -1,0 +1,215 @@
+RAM Usage
+
+1B00: 01 00 00 10 00 00 00 00 02 78 38 78 38 00 F8 00
+	01 2000	waitOnDraw		Cleared by alien-draw and set by next-alien. This ensures no alien gets missed while drawing.
+	00 2001		
+	00 2002	alienIsExploding	Not-0 if an alien is exploding, 0 if not exploting
+	10 2003	expAlienTimer	Time (ISR ticks) left in alien-explosion
+	00 2004	alienRow		Row number of current alien (cursor)
+	00 2005	alienFrame		Animation frame number (0 or 1) for current alien (cursor)
+	00 2006	alienCurIndex	Alien cursor index (from 0 to 54)
+	00 2007	refAlienDYr		Reference alien delta Yr
+	02 2008	refAlienDXr		Reference alien delta Xr (rotated, X moves TWO pixels right)
+	78 2009	refAlienYr		Reference alien Yr coordinate ($78=120, upside down=>134) 
+	38 200A	refAlienXr		Reference alien Xr coordinate ($38=56)
+	78 200B	alienPosLSB		Alien cursor bit pos (LSB)
+	38 200C	alienPosMSB		Alien cursor bit pos (MSB)
+	00 200D	rackDirection	Value 0 if rack is moving right or 1 if rack is moving left
+	f8 200E	rackDownDelta	Constant value of alien rack dropping after bumping screen edge  =-8 (signed byte)
+	00 200F		
+
+1B10: 00 80 00 8E 02 FF 05 0C 60 1C 20 30 10 01 00 00   
+	00 2010	obj0TimerMSB	
+	80 2011	obj0TimerLSB	Wait 128 interrupts (about 2 secs) before player task starts
+	00 2012	obj0TimerExtra	
+
+	8e 2013	obj0HanlderLSB	
+	02 2014	oBJ0HanlderMSB	Player handler code at 028E
+
+	ff 2015	playerAlive		Player is alive (FF=alive). Toggles between 0 and 1 for blow-up images.
+
+	05 2016	expAnimateTimer	Time till next blow-up sprite change (reloaded to 5)
+	0c 2017	expAnimateCnt	Number of changes left in blow-up sequence
+
+	60 2018	plyrSprPicL		Player sprite descriptor ... picture LSB
+	1c 2019	plyrSprPicM		Player sprite descriptor ... picture MSB
+
+	20 201A	playerYr		Player sprite descriptor ... location LSB (y=32, inverted = 224)
+	30 201B	playerXr		Player sprite descriptor ... location MSB (x=48)
+
+	10 201C	plyrSprSiz		Player sprite descriptor ... size of sprite (16px)
+	01 201D	nextDemoCmd		Next movement command for demo
+	00 201E	hidMessSeq		Set to 1 after 1st of 2 sequences are entered for hidden-message display
+	00 201F					Appears to be unused
+
+1B20: 00 00 00 BB 03 00 10 90 1C 28 30 01 04 00 FF FF  
+	00 2020	obj1TimerMSB	
+	00 2021	obj1TimerLSB	
+	00 2022	obj1TimerExtra	All 0's ... run immediately
+	bb 2023	obj1HandlerLSB	
+	03 2024	obj1HandlerMSB	Shot handler code at 03BB
+
+	00 2025	plyrShotStatus	0 if available, 1 if just initiated, 2 moving normally, 3 hit something besides alien, 5 if alien explosion is in progress, 4 if alien has exploded (remove from active duty)
+	10 2026	blowUpTimer		Sprite blow-up timer
+
+	90 2027	obj1ImageLSB	
+	1c 2028	obj1ImageMSB	Sprite image at 1C90 (just one byte)
+	28 2029	obj1CoorYr		Player shot Y coordinate
+	30 202A	obj1CoorXr		Player shot X coordinate
+	01 202B	obj1ImageSize	Size of shot image (just one byte)
+	04 202C	shotDeltaX		Shot's delta X (rotated screen, it is delta Y)
+
+	00 202D	fireBounce		1 if button has been handled but remains down
+	ff 202E		
+	ff 202F		
+
+1B30: 00 00 02 76 04 00 00 00 00 00 04 EE 1C 00 00 03    
+	00 2030	obj2TimerMSB	
+	00 2031	obj2TimerLSB	
+	02 2032	obj2TimerExtra	Game object -3 runs when this is 1. Game object 4 runs when this is 2. (copied to 2080 in game loop)
+
+	76 2033	obj2HandlerLSB	
+	04 2034	obj2HandlerMSB	Handler code at 0476
+
+	// rolling shot
+	00 2035	rolShotStatus	
+	00 2036	rolShotStepCnt	
+	00 2037	rolShotTrack	A 0 means this shot tracks the player
+	00 2038	rolShotCFirLSB	Pointer to column-firing table LSB (not used for targeting)
+	00 2039	rolShotCFirMSB	Pointer to column-firing table MSB (not used for MSB counter
+	04 203A	rolShotBlowCnt	
+	ee 203B	rolShotImageLSB	
+	1c 203C	rolShotImageMSB	
+	00 203D	rolShotYr	
+	00 203E	rolShotXr	
+	03 203F	rolShotSize	   Width of the bullet - it is 3x8
+
+1B40: 00 00 00 B6 04 00 00 01 00 1D 04 E2 1C 00 00 03 
+	00 2040	obj3TimerMSB	
+	00 2041	obj3TimerLSB	
+	00 2042	obj3TimerExtra	
+	b6 2043	obj3HandlerLSB	
+	04 2044	obj3HandlerMSB	Handler code at 04B6
+
+	// plunger shot
+	00 2045	pluShotStatus	
+	00 2046	pluShotStepCnt	
+	01 2047	pluShotTrack	A 1 means this shot does not track the player
+	00 2048	pluShotCFirLSB	Pointer to column-firing table LSB
+	1d 2049	pluShotCFirMSB	Pointer to column-firing table MSB
+	04 204A	pluShotBlowCnt	
+	e2 204B	pluShotImageLSB	
+	1c 204C	pluShotImageMSB	
+	00 204D	pluShotYr	
+	00 204E	pluSHotXr	
+	03 204F	pluShotSize	    Width of the bullet - it is 3x8
+
+1B50: 00 00 00 82 06 00 00 01 06 1D 04 D0 1C 00 00 03
+	00 2050	obj4TimerMSB	
+	00 2051	obj4TimerLSB	
+	00 2052	obj4TimerExtra	
+	82 2053	obj4HandlerLSB	
+	06 2054	obj4HandlerMSB	Handler code at 0682
+
+	// squiggly shot.
+	00 2055	squShotStatus	
+	00 2056	squShotStepCnt	
+	01 2057	squShotTrack	A 1 means this shot does not track the player
+	06 2058	squShotCFirLSB	Pointer to column-firing table LSB
+	1d 2059	squShotCFirMSB	Pointer to column-firing table MSB
+	04 205A	squSHotBlowCnt	
+	d0 205B	squShotImageLSB	
+	1c 205C	squShotImageMSB	
+	00 205D	squShotYr	
+	00 205E	squShotXr	
+	03 205F	squShotSize	    Width of the bullet - it is 3x8
+
+1B60: FF 00 C0 1C 00 00 10 21 01 00 30 00 12 00 00 00  
+	ff 2060	endOfTasks		FF marks the end of the tasks list
+	00 2061	collision		Set to 1 if sprite-draw detects collision
+
+	c0 2062	expAlienLSB	
+	1c 2063	expAlienMSB		Exploding alien picture 1CC0
+	00 2064	expAlienYr		Y coordinate of exploding alien
+	00 2065	expAlienXr		X coordinate of exploding alien
+	10 2066	expAlienSize	Size of exploding alien sprite (16 bytes)
+
+	21 2067	playerDataMSB	Current player's data-pointer MSB (21xx or 22xx)
+	01 2068	playerOK		1 means OK, 0 means blowing up
+
+	00 2069	enableAlienFire	1 means aliens can fire, 0 means not
+	30 206A	alienFireDelay	Count down till aliens can fire (2069 flag is then set)
+	00 206B	oneAlien		1 when only one alien is on screen
+	12 206C	temp206C		Holds the value ten ... number of characters in each "=xx POINTS" string but gets set to 18 in mem copy before game.
+	00 206D	invaded			Set to 1 when player blows up because rack has reached bottom
+
+	00 206E	skipPlunger		When there is only one alien left this goes to 1 to disable the plunger-shot when it ends
+	00 206F		
+
+1B70: 0F 0B 00 18 26 0F 0B 00 18 04 11 24 1B 25 FC 00 
+	// these are initialised erroneously with text "PLAY PLAYER<1>" #0 so presumably
+
+	0f 2070	otherShot1		When processing a shot, this holds one of the other shot's info
+	0b 2071	otherShot2		When processing a shot, this holds one of the other shot's info
+
+	00 2072	vblankStatus	80=screen is being drawn (don't touch), 0=blanking in progress (ok to change)
+
+	// they get promptly overwritten as the game plays.
+	2073	aShotStatus		Bit 0 set if shot is blowing up, bit 7 set if active
+	2074	aShotStepCnt	Count of steps made by shot (used for fire reload rate)
+	2075	aShotTrack		0 if shot tracks player or 1 if it uses the column-fire table
+	2076	aShotCFirLSB	Pointer to column-firing table LSB
+	2077	aShotCFirMSB	Pointer to column-firing table MSB
+	2078	aShotBlowCnt	Alen shot blow up counter. At 3 the explosion is drawn. At 0 it is done.
+	2079	aShotImageLSB	Alien shot image LSB
+	207A	aShotImageMSB	Alien shot image MSB
+
+	207B	alienShotYr		Alien shot delta Y
+	207C	alienShotXr		Alien shot delta X
+	207D	alienShotSize	Alien shot size
+	207E	alienShotDelta	Alien shot speed. Normally -1 but set to -4 with less than 9 aliens
+	207F	shotPicEnd		the last picture in the current alien shot animation
+
+1B80: 01 FF FF 00 00 00 20 64 1D D0 29 18 02 54 1D 00         
+	01 2080	shotSync		All 3 shots are synchronized to the GO-2 timer. This is copied from timer in the game loop
+	ff 2081	tmp2081			Used to hold the remember/restore flag in shield-copy routine
+	ff 2082	numAliens		Number of aliens on screen
+
+	00 2083	saucerStart		Flag to start saucer (set 00 to 1 when 2091:2092 counts down to 0)
+	00 2084	saucerActive	Saucer is on screen (1 means yes)
+	00 2085	saucerHit		Saucer has been hit (1 means draw it but don't move it)
+	20 2086	saucerHitTime	Hit-sequence timer (explosion drawn at 1F, score drawn at 18)
+
+	64 2087	saucerPriLocLSB	Mystery ship print descriptor ... coordinate LSB
+	1d 2088	saucerPriLocMSB	Mystery ship print descriptor ... coordinate MSB
+
+	d0 2089	saucerPriPicLSB	Mystery ship print descriptor ... message LSB
+	29 208A	saucerPriPicMSB	Mystery ship print descriptor ... message MSB
+
+	18 208B	saucerPriSize	Mystery ship print descriptor ... number of characters
+	02 208C	saucerDeltaY	Mystery ship delta Y
+
+	54 208D	sauScoreLSB		Pointer into mystery-ship score table (MSB)
+	1d 208E	sauScoreMSB		Pointer into mystery-ship score table (LSB)
+
+	00 208F	shotCountLSB	Bumped every shot-removal. Saucer's direction is bit 0. (0=2/29, 1=-2/E0)
+
+1B90: 08 00 06 00 00 01 40 00 01 00 00 10 9E 00 20 1C   
+	08 2090	shotCountMSB	Read as two-bytes with 208F, but never used as such.
+	--
+	00 2091	tillSaucerLSB	
+	06 2092	tillSaucerMSB	Count down every game loop. When it reaches 0 saucer is triggerd. Reset to 600.
+
+	00 2093	waitStartLoop	1=in wait-for-start loop, 0=in splash screens
+	00 2094	soundPort3		Current status of sound port (out $03)
+	01 2095	changeFleetSnd	Set to 1 in ISR if time to change the fleet sound
+	40 2096	fleetSndCnt		Delay until next fleet movement tone
+	00 2097	fleetSndReload	Reload value for fleet sound counter
+	01 2098	soundPort5		Current status of sound port (out $05)
+	00 2099	extraHold		Duration counter for extra-ship sound
+	00 209A	tilt			1 if tilt handling is in progress
+	10 209B	fleetSndHold	Time to hold fleet-sound at each change
+	9e 209C		
+	00 209D		
+	20 209E		
+	1c 209F

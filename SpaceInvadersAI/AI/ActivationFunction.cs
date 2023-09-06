@@ -42,13 +42,6 @@ internal static class ActivationUtils
     /// <param name="input"></param>
     /// <returns></returns>
     private delegate double ActivationDelegateMethod(double input);
-
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
-    private delegate double ActivationDerivativeDelegateMethod(double input);
     #endregion
 
     /// <summary>
@@ -103,10 +96,13 @@ internal static class ActivationUtils
     /// <returns></returns>
     internal static double Activate(ActivationFunction activationFunction, double value)
     {
+        // If no activation function, just return the value. This is a way of allowing it to be set to an enum rather than null.
         if (activationFunction == ActivationFunction.None) return value;
-
+        
+        // there should be a method for each activation function, this invokes it.
         if (activationFunctionMap.TryGetValue(activationFunction, out ActivationDelegateMethod? method)) return method(value);
 
+        // enum has more values than we have methods registered for.
         throw new ArgumentException("activation function is not recognised", nameof(activationFunction));
     }
 
@@ -126,7 +122,7 @@ internal static class ActivationUtils
     /// <returns></returns>
     private static double TanHActivationFunction(double x)
     {
-        return (double)Math.Tanh(x); // f(x) = tanh(x) = 2/(1+e^-2x)-1
+        return Math.Tanh(x); // f(x) = tanh(x) = 2/(1+e^-2x)-1
     }
 
     /// <summary>
@@ -155,7 +151,7 @@ internal static class ActivationUtils
     /// <returns></returns>
     private static double SigmoidActivationFunction(double x)
     {
-        double k = (double)Math.Exp(-x); // f(x) = 1/(1+e^-x)  or e^x/(e^x + 1)
+        double k = Math.Exp(-x); // f(x) = 1/(1+e^-x)  or e^x/(e^x + 1)
         return 1 / (k + 1);
     }
 
@@ -216,7 +212,7 @@ internal static class ActivationUtils
     /// <returns></returns>
     private static double LogisticActivationFunction(double x)
     {
-        return (double)(1 / (1 + Math.Exp(-x))); // f(x) = 1/(1+e^-x)
+        return (1 / (1 + Math.Exp(-x))); // f(x) = 1/(1+e^-x)
     }
 
     /// <summary>
@@ -266,7 +262,7 @@ internal static class ActivationUtils
     /// <returns></returns>
     private static double GaussianActivationFunction(double x)
     {
-        return (double)Math.Exp(-Math.Pow(x, 2));
+        return Math.Exp(-Math.Pow(x, 2));
     }
 
     /// <summary>
@@ -276,7 +272,7 @@ internal static class ActivationUtils
     /// <returns></returns>
     private static double BENTIdentityActivationFunction(double x)
     {
-        double d = (double)Math.Sqrt(Math.Pow(x, 2) + 1);
+        double d = Math.Sqrt(Math.Pow(x, 2) + 1);
         return (d - 1) / 2 + x;
     }
 
@@ -299,7 +295,7 @@ internal static class ActivationUtils
     /// <returns></returns>
     private static double BipolarSigmoidActivationFunction(double x)
     {
-        return (double)(2 / (1 + Math.Exp(-x)) - 1);
+        return (2 / (1 + Math.Exp(-x)) - 1);
     }
 
     /// <summary>
@@ -345,7 +341,7 @@ internal static class ActivationUtils
         double scale = 1.0507009873554804934193349852946;
         double fx = x > 0 ? x : alpha * Math.Exp(x) - alpha;
 
-        return (double)(fx * scale);
+        return (fx * scale);
     }
 
     /// <summary>
@@ -355,7 +351,7 @@ internal static class ActivationUtils
     /// <returns></returns>
     private static double SwishActivationFunction(double x)
     {
-        return (double)(x / (1 + Math.Exp(-x)));
+        return (x / (1 + Math.Exp(-x)));
     }
 
     /// <summary>
@@ -367,7 +363,7 @@ internal static class ActivationUtils
     /// <returns></returns>
     private static double MishActivationFunction(double x)
     {
-        return (double)(x * Math.Tanh(SoftPlusActivationFunction(x)));
+        return (x * Math.Tanh(SoftPlusActivationFunction(x)));
     }
 
     /// <summary>
@@ -378,7 +374,7 @@ internal static class ActivationUtils
     /// <returns></returns>
     private static double SinActivationFunction(double x)
     {
-        return (double)(x == 0 ? 1 : Math.Sin(x) / x);
+        return (x == 0 ? 1 : Math.Sin(x) / x);
     }
 
     /// <summary>
@@ -388,7 +384,7 @@ internal static class ActivationUtils
     /// <returns></returns>
     private static double LogLogActivationFunction(double x)
     {
-        return (double)(1 - Math.Exp(-Math.Exp(x)));
+        return (1 - Math.Exp(-Math.Exp(x)));
     }
 
     /// <summary>
@@ -398,7 +394,7 @@ internal static class ActivationUtils
     /// <returns></returns>
     private static double LogSigmoidActivationFunction(double x)
     {
-        return (double)Math.Log(1 / (1 + Math.Exp(-x)));
+        return Math.Log(1 / (1 + Math.Exp(-x)));
     }
 
     /// <summary>

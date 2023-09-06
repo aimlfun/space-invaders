@@ -30,7 +30,7 @@ internal static class Utils
     /// <summary>
     /// We do this once to make sure it's compiled (not repeatedly).
     /// </summary>
-    private static readonly Regex regExToFindAttributePairs = new(attributeValuePairsRegExPattern, RegexOptions.Compiled);
+    private static readonly Regex regExToFindAttributePairs = new(attributeValuePairsRegExPattern, RegexOptions.Compiled, TimeSpan.FromMilliseconds(100));
 
     /// <summary>
     /// Returns a cryptographic random double between -1 and +1.
@@ -85,7 +85,7 @@ internal static class Utils
         double dx = pt2.X - pt1.X;
         double dy = pt2.Y - pt1.Y;
 
-        return (double)Math.Sqrt(dx * dx + dy * dy);
+        return Math.Sqrt(dx * dx + dy * dy);
     }
 
     /// <summary>
@@ -105,7 +105,7 @@ internal static class Utils
 
         while (regExToFindAttributePairs.IsMatch(modifiedTarget))
         {
-            string result = Regex.Match(modifiedTarget, attributeValuePairsRegExPattern).Groups[1].Value;
+            string result = Regex.Match(modifiedTarget, attributeValuePairsRegExPattern, RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(100)).Groups[1].Value;
 
             if (string.IsNullOrWhiteSpace(result)) break;
 

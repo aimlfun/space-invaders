@@ -1,0 +1,11 @@
+{
+  "ScoreMultiplier": 0.01,
+  "LevelMultiplier": 10000,
+  "InvaderMultiplier": 50,
+  "SaucerMultiplier": 0.01,
+  "AccuracyMultiplier": 0.3,
+  "KillsAvoidedMultiplier": 0.1,
+  "ShieldsShotMultiplier": -0.06,
+  "LivesMultiplier": 0,
+  "PunishmentForInvadersReachingBottom": 0
+}

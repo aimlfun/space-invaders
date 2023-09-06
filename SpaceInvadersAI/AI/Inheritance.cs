@@ -37,12 +37,12 @@ internal static class Inheritance
     {
         if (parentBrain1.Networks.Count != parentBrain2.Networks.Count)
         {
-            throw new Exception("Cross over isn't possible if the number of networks are different.");
+            throw new ApplicationException("Cross over isn't possible if the number of networks are different.");
         }
 
         // initialise a new offspring brain
         Brain offspringBrain = new( 
-            brainName: $"{Brain.NextUniqueBrainID}",
+            brainName: UniqueBrainID.GetNextBrainId(),
             PersistentConfig.Settings.AllowedActivationFunctions,
             inputParameters: parentBrain1.BrainInputs.Keys.ToArray(),
             outputParameters: parentBrain1.BrainOutputs.Keys.ToArray())
@@ -82,7 +82,7 @@ internal static class Inheritance
         if (network1.Inputs.Count != network2.Inputs.Count ||
             network1.Outputs.Count != network2.Outputs.Count)
         {
-            throw new Exception("Cross over isn't possible if the 2 networks have differing number of input and outputs.");
+            throw new ApplicationException("Cross over isn't possible if the 2 networks have differing number of input and outputs.");
         }
 
         // I have not implemented this yet, but seems a good idea
@@ -229,14 +229,14 @@ internal static class Inheritance
 
             if (INPUTorOUTPUTtoClone.Type == CellType.INPUT)
             {
-                newCell = ((INPUTCell)INPUTorOUTPUTtoClone).Clone(offspringNetwork.BrainItIsPartOf, offspringNetwork);
-                offspringNetwork.Inputs.Add(newCell.Id, (INPUTCell)newCell);
+                newCell = ((InputCell)INPUTorOUTPUTtoClone).Clone(offspringNetwork.BrainItIsPartOf, offspringNetwork);
+                offspringNetwork.Inputs.Add(newCell.Id, (InputCell)newCell);
             }
             else
             {
                 Debug.Assert(INPUTorOUTPUTtoClone.Type == CellType.OUTPUT);
-                newCell = ((OUTPUTCell)INPUTorOUTPUTtoClone).Clone(offspringNetwork.BrainItIsPartOf, offspringNetwork);
-                offspringNetwork.Outputs.Add(newCell.Id, (OUTPUTCell)newCell);
+                newCell = ((OutputCell)INPUTorOUTPUTtoClone).Clone(offspringNetwork.BrainItIsPartOf, offspringNetwork);
+                offspringNetwork.Outputs.Add(newCell.Id, (OutputCell)newCell);
             }
 
             // create an exact "clone"

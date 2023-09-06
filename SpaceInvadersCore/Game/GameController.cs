@@ -1,14 +1,9 @@
-﻿#define DrawShieldsIn252
-//#define RadarREMOVAL
-//#define PaintRadarNONSHIELD
-//#define PaintRadarSHIELD
-using SpaceInvadersCore.Game.Player;
-using SpaceInvadersCore;
+﻿using SpaceInvadersCore.Game.Player;
 using SpaceInvadersCore.Game.SpaceInvaders;
 using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Imaging;
-using Windows.Globalization.DateTimeFormatting;
+using SpaceInvadersCore.Game.AISupport;
+using SpaceInvadersCore.Utilities;
 
 namespace SpaceInvadersCore.Game;
 
@@ -29,12 +24,25 @@ public class GameController
     /// <summary>
     /// The AI is quite good without shields, so we enable it to play with or without shields.
     /// </summary>
-    private readonly bool drawShields = true;
+    private readonly bool drawShields;
+
+    /// <summary>
+    /// If set, we tag the screen with the frame number at the bottom of the screen.
+    /// </summary>
+    private readonly bool showingFrameNumberAtBottomOfScreen = false;
 
     /// <summary>
     /// Represents the play ship with location, and bullet.
     /// </summary>
-    private PlayerShip playerShip;
+    internal PlayerShip playerShip;
+
+    /// <summary>
+    /// Checks to see if the player is ready to play.
+    /// </summary>
+    public bool PlayerIsReady
+    {
+        get { return playerShip.Ready; }
+    }
 
     /// <summary>
     /// Represents a flying saucer, that appears seemingly at random.
@@ -52,9 +60,14 @@ public class GameController
     private int currentFrame = 0;
 
     /// <summary>
-    /// Timer for the saucer that is increased. When it reaches a designated amount, the saucer appears.
+    /// This tracks the frame since the start, to output on the bottom of the screen. This means when it loops (past level 10), you can see it isn't the same level.
     /// </summary>
-    private int saucerCounterUpToAppearance = 0;
+    private int frameSinceStartOfGame = 0;
+
+    /// <summary>
+    /// Timer for the saucer that is decrement. When it reaches 0, the saucer appears.
+    /// </summary>
+    private int saucerCountDownToAppearance = 0;
 
     /// <summary>
     /// Tracks lives, level, etc.
@@ -81,9 +94,20 @@ public class GameController
     /// Useful if goal is infinity score.
     /// </summary>
     private readonly bool endGameIfSingleLifeLost = false;
+    
+    /// <summary>
+    /// Stores the radar points plotted, so they can be "unplotted" without sin/cos computation.
+    /// </summary>
+    private readonly List<Point> radarPoints = new();
     #endregion
 
     #region INTERNAL PROPERTIES
+
+    /// <summary>
+    /// When set to a value other than 0, this decrements with each frame.
+    /// </summary>
+    internal int GeneralPurposeCountDownTimer = 0;
+
     /// <summary>
     /// Tracks the number of shots by the player.
     /// </summary>
@@ -197,12 +221,15 @@ public class GameController
     {
         get
         {
-            if (spaceInvaderController is null) throw new Exception("controller is null");
+            if (spaceInvaderController is null) throw new ApplicationException("controller is null");
 
             return spaceInvaderController.BulletsAvoided;
         }
     }
 
+    /// <summary>
+    /// X position of the player ship.
+    /// </summary>
     public int PlayerX
     {
         get { return playerShip.Position.X; }
@@ -248,23 +275,36 @@ public class GameController
     /// Sets the score for the AI to enabled independent training.
     /// </summary>
     /// <param name="score"></param>
-    public void AISetScore(int score)
+    public void AISetScore(int score, bool drawLevelIndicator = true)
     {
         scoreboard.AISetScore(score);
-        
+        Reset();
+
+        if (drawLevelIndicator)
+        {
+            // draw the level where player 2 score would be, otherwise one would never know what level it is currently on.
+            string levelLabel = $"LEVEL {gameState.Level}";
+
+            videoScreen.FillRectangle(Color.Black, new Rectangle(216 - 8 - levelLabel.Length * 8, OriginalDataFrom1978.s_scorePlayer2Rectangle.Y, levelLabel.Length * 8, 8));
+
+            // we write these to the screen once for performance reasons. Just to show off, we do so using our video display code not onto a Bitmap.
+            videoScreen.DrawString(levelLabel.ToUpper().Replace("/", "-"), new Point(216 - 8 - levelLabel.Length * 8, OriginalDataFrom1978.s_scorePlayer2Rectangle.Y)); // alphanumeric sprites are 8px wide
+        }
+                
+        // Enable it to record level 2, you can add "if (gameState.Level == 2) DebugSettings.c_debugDrawEveryFrameAsAnImage = true;"
+    }
+
+    /// <summary>
+    /// Resets everything,so we can transition through levels when it's in "AI Play Game" mode.
+    /// </summary>
+    private void Reset()
+    {
         ShotsMadeByPlayer = 0;
         saucer = null;
-        saucerCounterUpToAppearance = 0;
+        saucerCountDownToAppearance = OriginalDataFrom1978.c_saucerFrameFrequency;
         scoreboard.AdditionalLifeDue = false;
         radarPoints.Clear();
-
-        // draw the level where player 2 score would be, otherwise one would never know what level it is currently on.
-        string levelLabel = $"LEVEL {gameState.Level}";
-
-        videoScreen.FillRectangle(Color.Black, new Rectangle(216 - 8 - levelLabel.Length * 8, 24, levelLabel.Length*8, 8));
-
-        // we write these to the screen once for performance reasons. Just to show off, we do so using our video display code not onto a Bitmap.
-        videoScreen.DrawString(levelLabel.ToUpper().Replace("/", "-"), new Point(216 - 8 - levelLabel.Length * 8, 24)); // alphanumeric sprites are 8px wide
+        GeneralPurposeCountDownTimer = 0;
     }
     #endregion
 
@@ -273,12 +313,13 @@ public class GameController
     /// Constructor.
     /// </summary>
 #pragma warning disable CS8618 // Player is initialised in InitialiseLevel, which is called from the constructor. This is a false positive.
-    public GameController(VideoDisplay screen, int highScore, bool playingWithShields = true, bool oneLevelOnly = false, int startLevel = 1, bool endIfSingleLifeLost = false)
+    public GameController(VideoDisplay screen, int highScore, bool playingWithShields = true, bool oneLevelOnly = false, int startLevel = 1, bool endIfSingleLifeLost = false, bool showFrameNumber = false)
 #pragma warning restore CS8618 // Player is initialised in InitialiseLevel, which is called from the constructor. This is a false positive
     {
         videoScreen = screen;
         drawShields = playingWithShields;
         exitAtEndOfLevel = oneLevelOnly;
+        showingFrameNumberAtBottomOfScreen = showFrameNumber;
         endGameIfSingleLifeLost = endIfSingleLifeLost;
 
         InitialiseVideoScreen();
@@ -295,7 +336,7 @@ public class GameController
         scoreboard.Draw();
         scoreboard.DrawHighScore();
 
-        videoScreen.DrawString("CREDIT 00", new Point(136, OriginalDataFrom1978.c_greenLineIndicatingFloorPX + 2));
+        videoScreen.DrawString("CREDIT 00", OriginalDataFrom1978.s_credit_00_position);
     }
 
     /// <summary>
@@ -303,10 +344,21 @@ public class GameController
     /// </summary>
     public void Play()
     {
+        if (gameState.Level == DebugSettings.c_debugDataCollectionAtLevel) Logger.Log($"data-collection-{gameState.Level}", string.Join(",", GetGameData()));
+
         bool gameOver = gameState.GameOver;
 
-        ++currentFrame;
+        ++currentFrame; // this is 0 at start of level, and is used to ensure saucer moves every 3 etc.
+
+        // we track frames, and if reaches the frame to debug, it enters the debugger.
+        if (++frameSinceStartOfGame == DebugSettings.c_debugStopAtFrameNumber) Debugger.Break();
+
+        if (showingFrameNumberAtBottomOfScreen) ShowFrameNumber();
+
         ++gameState.FramesPlayed; // keep track, we can teach it to complete levels in less frames
+
+        // every frame the count down timer is decremented, so we can use it for timing events.
+        if (GeneralPurposeCountDownTimer > 0) --GeneralPurposeCountDownTimer;
 
         if (!gameOver)
         {
@@ -318,6 +370,8 @@ public class GameController
 
             MovePlayerIfRequested();
 
+            Debug.Assert(spaceInvaderController is not null);
+
             // The alien explosion is actually the player bullet based on watching YouTube videos.
             // So what I can glean is that you cannot fire whilst the explosion is happening.
             if (!spaceInvaderController.AlienExploding && playerShip.FireBulletIfRequested()) ++ShotsMadeByPlayer;// increment the # shots, so AI can rank the more accurate players higher
@@ -326,7 +380,7 @@ public class GameController
         }
 
         // draw the bullet even on game over, so the player can see where it hit
-        if (currentFrame % 3 == 0) spaceInvaderController?.DrawInvaderBullets();
+        spaceInvaderController?.DrawInvaderBullets();
 
         if (gameState.GameOver) return; // ensure game cannot resume if game over
 
@@ -336,11 +390,46 @@ public class GameController
     }
 
     /// <summary>
+    /// Sometimes it's useful to collate all the data points frame by frame and write them to a log file.
+    /// </summary>
+    /// <returns></returns>
+    private double[] GetGameData()
+    {
+        Debug.Assert(spaceInvaderController is not null);
+
+        List<double> data = new(AIGetObjectArray())
+        {
+            PlayerX,
+            Score,
+            currentFrame,
+            gameState.ShieldsHit
+        };
+
+        data.AddRange(spaceInvaderController.GetGameDataForDebugging());
+
+        return data.ToArray();
+    }
+
+    /// <summary>
+    /// Draws a frame number to the screen, so it is clear when recording a video which frame is being displayed.
+    /// </summary>
+    private void ShowFrameNumber()
+    {
+        string frameLabel = $"{frameSinceStartOfGame}";
+
+        int width = frameLabel.Length * 8; // alphanumeric sprites are 8px wide
+
+        // clear the space we're drawing, the write the size
+        videoScreen.FillRectangle(Color.Black, new Rectangle(120 - width / 2, 240, width, 8));
+        videoScreen.DrawString($"{frameLabel}", new Point(120 - width / 2, 240));
+    }
+
+    /// <summary>
     /// Enables the AIPlayController to write the game over message to the screen.
     /// </summary>
     public void WriteGameOverToVideoScreen()
     {
-        videoScreen.DrawString("GAME OVER", new Point(76, 50));
+        videoScreen.DrawString("GAME OVER", new Point(76, 40));
     }
 
     /// <summary>
@@ -412,7 +501,7 @@ public class GameController
     /// <returns></returns>
     public double[] AIGetObjectArray()
     {
-        if (spaceInvaderController is null) throw new Exception("spaceInvaderController is null - something has broken in the initialisation");
+        if (spaceInvaderController is null) throw new ApplicationException("spaceInvaderController is null - something has broken in the initialisation");
 
         // where is the player located? Returned so the AI knows where it is.
         List<double> data = new()
@@ -424,6 +513,9 @@ public class GameController
         // if it is firing, AI doesn't need to know where. It either hits or doesn't
         if (playerShip.BulletIsInMotion)
         {
+            // SonarQube pointed out the lack of casting one or both to (double). Embarassingly it is *correct*.
+            // That means this is likely to always be "0". I would fix it, but if I do the trained AI will be invalid, it won't appreciate
+            // the fact it learnt with 0 and now it has strange values.
             data.Add(playerShip.BulletLocation.Y / OriginalDataFrom1978.c_screenHeightPX);
         }
         else
@@ -495,11 +587,9 @@ public class GameController
         // the screen is black, with an alpha 255
         videoScreen.ClearDisplay(Color.Black);
 
-        // the green line at the bottom of the screen is drawn once, and damaged as the aliens fire bullet
-        videoScreen.DrawGreenHorizontalBaseLine(OriginalDataFrom1978.s_playerColour, OriginalDataFrom1978.c_greenLineIndicatingFloorPX);
-
+        
         // whilst the score changes throughout the game, the labels for them do not.
-        videoScreen.DrawString("SCORE<1> HI-SCORE SCORE<2>", new Point(8, 8));
+        videoScreen.DrawString(" SCORE<1> HI-SCORE SCORE<2>", OriginalDataFrom1978.s_score1HighScoreAndScore2Position);
     }
 
     /// <summary>
@@ -511,8 +601,11 @@ public class GameController
     /// </summary>
     private void InitialiseLevel()
     {
+        // the green line at the bottom of the screen is drawn once per level, and damaged as the aliens fire bullet
+        videoScreen.DrawGreenHorizontalBaseLine(OriginalDataFrom1978.s_playerColour, OriginalDataFrom1978.c_greenLineIndicatingFloorPX);
+
         currentFrame = 0;
-        saucerCounterUpToAppearance = 0;
+        saucerCountDownToAppearance = OriginalDataFrom1978.c_saucerFrameFrequency;
 
         CancelMove();
 
@@ -526,6 +619,8 @@ public class GameController
 
         // we need a fresh set of Space Invaders.
         spaceInvaderController = new(videoScreen, gameState.Level);
+
+        gameState.ResetShieldCount();
 
         if (drawShields) AddShields(); // the shields provide somewhere to hide, but the AI doesn't know of them or care about their existence.
 
@@ -556,10 +651,10 @@ public class GameController
             █████           ██████          
         */
 
-        int topYofShields = OriginalDataFrom1978.c_greenLineIndicatingFloorPX - 48;
+        int topYofShields = OriginalDataFrom1978.c_topOfShieldsPX;
 
         // They are positioned as follows:
-        //  |                                                          |____ <-- 56px above the green line.
+        //  |                                                          |
         //  |     ##             ##              ##             ##     | 
         //  |    ####           ####            ####           ####    | 
         //  |    #  #           #  #            #  #           #  #    | 
@@ -567,19 +662,22 @@ public class GameController
         //       |              |               |              |
         //       32             77             122            167    
 
-        Sprite shield = OriginalSpritesFrom1978.Sprites["Shield"];
+        Sprite shield = OriginalSpritesFrom1978.Get("Shield");
 
-#if DrawShieldsIn252
-        videoScreen.DrawShield(shield, 32, topYofShields);
-        videoScreen.DrawShield(shield, 77, topYofShields);
-        videoScreen.DrawShield(shield, 122, topYofShields);
-        videoScreen.DrawShield(shield, 167, topYofShields);
-#else
-        videoScreen.DrawSprite(shield, 32, topYofShields);
-        videoScreen.DrawSprite(shield, 77, topYofShields);
-        videoScreen.DrawSprite(shield, 122, topYofShields);
-        videoScreen.DrawSprite(shield, 167, topYofShields);
-#endif
+        if (DebugSettings.s_DrawShieldsIn252)
+        {
+            videoScreen.DrawShield(shield, 32, topYofShields);
+            videoScreen.DrawShield(shield, 77, topYofShields);
+            videoScreen.DrawShield(shield, 122, topYofShields);
+            videoScreen.DrawShield(shield, 167, topYofShields);
+        }
+        else
+        {
+            videoScreen.DrawSprite(shield, 32, topYofShields);
+            videoScreen.DrawSprite(shield, 77, topYofShields);
+            videoScreen.DrawSprite(shield, 122, topYofShields);
+            videoScreen.DrawSprite(shield, 167, topYofShields);
+        }
     }
 
     /// <summary>
@@ -588,7 +686,9 @@ public class GameController
     /// </summary>
     private void ResetPlayerPosition()
     {
-        if (spaceInvaderController is null) throw new Exception("controller is null");
+        if (playerShip.BulletIsInMotion) playerShip.CancelBullet();
+
+        if (spaceInvaderController is null) throw new ApplicationException("controller is null");
 
         // put the player back at the left
         playerShip = new(videoScreen);
@@ -612,6 +712,8 @@ public class GameController
     /// </summary>
     private void HandleCollisions()
     {
+        Debug.Assert(spaceInvaderController is not null);
+
         // aliens reached the bottom is a game-over state. This is not true to the original, but shortens the 
         // length of the game the AI plays.
         if (spaceInvaderController.SpaceInvadersReachedBottom)
@@ -623,10 +725,10 @@ public class GameController
         // if alien bullet hits player, it's bad news...
         foreach (SpaceInvaderBulletBase bullet in spaceInvaderController.Bullets)
         {
-            if (bullet.IsDead) continue;
+            if (bullet.State == SpaceInvaderBulletBase.BulletState.dead) continue;
 
             // bullet reach bottom base line, destroy it
-            if (bullet.Position.Y > OriginalDataFrom1978.c_greenLineIndicatingFloorPX - 7)
+            if (bullet.Position.Y > OriginalDataFrom1978.c_greenLineIndicatingFloorPX - 7 && bullet.State == SpaceInvaderBulletBase.BulletState.normalMovement)
             {
                 BulletReachedBottomGreenLineDestroyTheBullet(bullet);
                 continue;
@@ -646,9 +748,9 @@ public class GameController
                     bullet.EraseSprite();
 
                     // destroy an area of the shield
-                    videoScreen.EraseSprite(OriginalSpritesFrom1978.Sprites["AShotExplo"], bullet.Position.X - 3, bullet.Position.Y - 3);
+                    videoScreen.EraseSprite(OriginalSpritesFrom1978.Get("AShotExplo"), bullet.Position.X - 3, bullet.Position.Y - 3);
 
-                    bullet.IsDead = true;
+                    bullet.State = SpaceInvaderBulletBase.BulletState.dead;
                 }
             }
         }
@@ -674,7 +776,7 @@ public class GameController
 
         // the bullet that hit the player is destroyed, and removed from the screen
         bullet.EraseSprite();
-        bullet.IsDead = true;
+        bullet.State = SpaceInvaderBulletBase.BulletState.dead;
 
         // being shot is bad news, we reduce the lives. To be fair, being shot by a honking great alien weapon is likely to blow you up.
         DecrementLives();
@@ -695,13 +797,15 @@ public class GameController
     /// The challenge is that it should remove 3 pixels from the green line (alternate pixels).
     /// </summary>
     /// <param name="bullet"></param>
-    private void BulletReachedBottomGreenLineDestroyTheBullet(SpaceInvaderBulletBase bullet)
+    private static void BulletReachedBottomGreenLineDestroyTheBullet(SpaceInvaderBulletBase bullet)
     {
-        // remove the bullet
         bullet.EraseSprite();
 
-        // destroy a couple of pixels on the green horizontal line
+        bullet.State = SpaceInvaderBulletBase.BulletState.explosionInProgress;
         bullet.Position.Y = OriginalDataFrom1978.c_greenLineIndicatingFloorPX - 4; // stop it destroying below the green line
+        bullet.LastPosition = bullet.Position;
+
+        // explosion
 
         //   █   
         // █   █ 
@@ -711,11 +815,6 @@ public class GameController
         //  █████
         // █ ███ 
         //  █ █ █    <- removes this pattern from the green line
-
-        videoScreen.EraseSprite(OriginalSpritesFrom1978.Sprites["AShotExplo"], (bullet.Position.X / 2) * 2 - 3, bullet.Position.Y - 3);
-
-        // bullet hit the bottom, it is dead
-        bullet.IsDead = true;
     }
 
     /// <summary>
@@ -739,6 +838,8 @@ public class GameController
     /// </summary>
     private void DetectAndHandleCollisionOfBullet()
     {
+        Debug.Assert(spaceInvaderController is not null);
+
         if (playerShip.BulletHitSomething)
         {
             // if player bullet hits saucer -> increase score, remove saucer
@@ -757,35 +858,43 @@ public class GameController
             }
             else
             {
-                bool playerShotBullet = false;
-
-                // check to see if player shot a bullet fired by an alien
-                foreach (SpaceInvaderBulletBase bullet in spaceInvaderController.Bullets)
-                {
-                    if (bullet.BulletHit(new Point(playerShip.BulletLocation.X, playerShip.BulletLocation.Y)))
-                    {
-                        bullet.EraseSprite();
-                        bullet.IsDead = true;
-                        playerShotBullet = true;
-                        break; // can't hit multiple bullets
-                    }
-                }
+                bool playerShotBullet = DidPlayerShootBullet();
 
                 // player shot shield :(
                 if (!playerShotBullet)
                 {
                     ++gameState.ShieldsHit;
-                    //spaceInvaderController.DebugOutputAlienPositions(player.BulletLocation);
+                    //for debugging, you can add spaceInvaderController.DebugOutputAlienPositions(player.BulletLocation);
 
                     CancelPlayerBullet();
                     return;
                 }
 
                 // player shot something.
-                videoScreen.EraseSprite(OriginalSpritesFrom1978.Sprites["ShotExploding"], playerShip.BulletLocation.X - 2, playerShip.BulletLocation.Y + 3);
+                videoScreen.EraseSprite(OriginalSpritesFrom1978.Get("ShotExploding"), playerShip.BulletLocation.X - 2, playerShip.BulletLocation.Y + 3);
                 CancelPlayerBullet();
             }
         }
+    }
+
+    /// <summary>
+    /// Detect if player shot a bullet fired by an alien.
+    /// </summary>
+    /// <returns></returns>
+    private bool DidPlayerShootBullet()
+    {
+        // check to see if player shot a bullet fired by an alien
+        foreach (SpaceInvaderBulletBase bullet in spaceInvaderController.Bullets)
+        {
+            if (bullet.BulletHit(new Point(playerShip.BulletLocation.X, playerShip.BulletLocation.Y)))
+            {
+                bullet.EraseSprite();
+                bullet.State = SpaceInvaderBulletBase.BulletState.dead;
+                return true; // can't hit multiple bullets
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -794,13 +903,15 @@ public class GameController
     /// <param name="row"></param>
     /// <param name="indexOfAlienHit"></param>
     private void HandleSpaceInvaderHit(int row, int indexOfAlienHit)
-    {
+    {        
         scoreboard.InvaderHit(row); // points for destroying a Space Invader
         scoreboard.Draw();
 
-        CancelPlayerBullet();
+        CancelPlayerBulletWithoutTimer(); // the alien exploding draws a "splat", and holds up the firing for a moment
 
-        spaceInvaderController.KillAt(indexOfAlienHit /*player.BulletLocation*/);
+        spaceInvaderController?.KillAt(indexOfAlienHit /*player.BulletLocation*/);
+
+        Debug.Assert(spaceInvaderController is not null);
 
         // no aliens? we start the next level.
         if (!spaceInvaderController.OneOrMoreSpaceInvaderRemaining)
@@ -854,12 +965,20 @@ public class GameController
     {
         if (!playerShip.BulletIsInMotion) return;
 
+        playerShip.ExplosionTime();
+        
+        playerShip.BulletHitSomething = false;
+    }
+    
+    /// <summary>
+    /// Cancels the player bullet, and removes it from the screen but without the explosion. It's used for when the player hits an invader.
+    /// </summary>
+    private void CancelPlayerBulletWithoutTimer()
+    {
+        if (!playerShip.BulletIsInMotion) return;
+        
         // removes the bullet from the screen
-        videoScreen.EraseSprite(OriginalSpritesFrom1978.Sprites["PlayerShotSpr"], playerShip.BulletLocation.X, playerShip.BulletLocation.Y - 2);
-
-        // we explode the bullet, and wipe out a larger area than the bullet itself.
-        videoScreen.EraseSprite(OriginalSpritesFrom1978.Sprites["ShotExploding"], playerShip.BulletLocation.X - 4, playerShip.BulletLocation.Y - 2);
-
+       
         playerShip.CancelBullet(); // we're done with this bullet.
         playerShip.BulletHitSomething = false;
     }
@@ -870,18 +989,20 @@ public class GameController
     /// </summary>
     private void MoveFlyingSaucerIfOnScreenOrCreateIfTime()
     {
-        ++saucerCounterUpToAppearance;
+        Debug.Assert(spaceInvaderController is not null);
+
+        --saucerCountDownToAppearance;
 
         // saucer doesn't fly if squiggly bullet is in use.
         if (spaceInvaderController.SquigglyBulletInUse) return;
 
         // If there are 8 or more aliens on the screen then a saucer begins its journey across the screen.
-        if (saucer is null && spaceInvaderController.SpaceInvadersRemaining >= 8 && saucerCounterUpToAppearance > OriginalDataFrom1978.c_saucerFrameFrequency)
+        if (saucer is null && spaceInvaderController.SpaceInvadersRemaining >= 8 && saucerCountDownToAppearance < 1)
         {
             saucer = new(videoScreen, ShotsMadeByPlayer);
         }
 
-        if (currentFrame % 3 == 0) saucer?.Move();
+        if (currentFrame % 3 == 0) saucer?.Move(); // saucer moves every 3 frames, because "GameObject3" would be updated every 3 frames.
 
         // remove the saucer when it goes off screen
         if (saucer is not null && saucer.IsOffScreen)
@@ -900,20 +1021,20 @@ public class GameController
         saucer = null; // stops it moving the offscreen/dead saucer
 
         // reset the counter so we don't get a saucer appearing immediately after the last one has been destroyed.
-        saucerCounterUpToAppearance = 0;
+        saucerCountDownToAppearance = OriginalDataFrom1978.c_saucerFrameFrequency;
     }
 
     /// <summary>
-    /// I think if one were fighting aliens, one would be firing missiles not bullets. I don't imagine a 50cal is really going to
+    /// I think if one were fighting aliens, one would be firing missiles not bullets. I don't imagine a 50-cal is really going to
     /// cut it.
     /// So here we ensure a seemingly random Space Invader is always firing, and player has a chance to.
     /// </summary>
     private void UpdateBullets()
     {
-        spaceInvaderController.FireIfBulletNotInMotion(scoreboard.Score, playerShip.Position.X, saucer is not null);
+        spaceInvaderController?.FireIfBulletNotInMotion(scoreboard.Score, playerShip.Position.X, saucer is not null);
 
-        // A shot makes a step every 3 frames. (4*60/3 = 80 pixels per second).
-        if (currentFrame % 3 == 0) spaceInvaderController.MoveBullet(playerShip.Position);
+        // an active shot makes a step every 3 frames. (4*60/3 = 80 pixels per second).
+        spaceInvaderController?.MoveBullet(playerShip.Position);
     }
 
     /// <summary>
@@ -921,7 +1042,13 @@ public class GameController
     /// </summary>
     private void MoveSpaceInvadersHorizontallyAndDownIfTheyHitAnEdge()
     {
-        if (playerShip.Ready) spaceInvaderController.AliensAreAllowedToFire = true;
+        Debug.Assert(spaceInvaderController is not null);
+
+        if (!spaceInvaderController.AliensAreAllowedToFire && playerShip.Ready)
+        {
+            spaceInvaderController.AliensAreAllowedToFire = true;
+        }
+     
         spaceInvaderController?.Move();
     }
 
@@ -944,202 +1071,16 @@ public class GameController
         return videoScreen.VideoShrunkForAI();
     }
 
-    List<Point> radarPoints = new();
-
     /// <summary>
-    /// This returns 51 data points via two radars + invader speed and direction indicator.
-    /// Radar 1: Sweep 45 different angles from -85 to +85, each value in the array corresponding to the distance to the nearest 
-    ///          invader/saucer in that direction. This radar penetrates shields and ignores them. Important to note, that bullets
-    ///          appear on the radar (player and invader).
-    /// Radar 2: Sweep 5 different angles from -15 +15, each value in the array corresponding to the distance to the nearest 
-    ///          shield in that direction. This is a short radar that only sees shields.
-    ///          Also note, it doesn't tell the AI of all the other shields, this is a defensive, am I protected or not sensor.
-    /// 
-    /// Humans know the shields are useful to hide between. With a simple radar that doesn't distinguish, how is it meant to know
-    /// whether to shoot or hide behind? What you force the AI to do is destroy the shields just in case it's an invader. 
-    /// 
-    /// The thing about is a shield is that knowing it was there, is not an indicator of it having not been blown to smithereens since.
-    /// In fact the AI has no concept of past, current, future it works in here and now. This radar thus informs of when there is shield
-    /// not destroyed that covers the size of the player ship (i.e. bullet cannot hit).
+    /// Returns the "radar", which enables the AI to see the Space Invaders and shields
     /// </summary>
     /// <returns></returns>
     public double[] AIGetRadarArray()
     {
-#if RadarREMOVAL
-        foreach (Point p in radarPoints)
-        {
-            if (ColorEquals(videoScreen.GetPixel(p), Color.Blue)) videoScreen.SetPixel(Color.FromArgb(255, 0, 0, 0), p);
-        }
+        Debug.Assert(spaceInvaderController is not null);
 
-        radarPoints.Clear();
-#endif
-
-        double[] RADAROutput = new double[45+15+1];
-
-        if (currentFrame == 0) return RADAROutput;
-
-        int samplePoints = 45;
-
-        float RADARAngleToCheckInDegrees = -85;
-
-        float RADARVisionAngleInDegrees = 2 * (-RADARAngleToCheckInDegrees) / (samplePoints - 1);
-
-        int searchDistanceInPixels = 180;
-
-        for (int RADARAngleIndex = 0; RADARAngleIndex < samplePoints; RADARAngleIndex++)
-        {
-            //     -45  0  45
-            //  -90 _ \ | / _ 90   <-- relative to direction of player. 0 = right, 90 = up, so we adjust for
-            double RADAARAngleToCheckInRadians = DegreesInRadians(90 + RADARAngleToCheckInDegrees);
-
-            // calculate ONCE per angle, not per radius.
-            double cos = Math.Cos(RADAARAngleToCheckInRadians);
-            double sin = Math.Sin(RADAARAngleToCheckInRadians);
-
-            float distanceToAlien = 0;
-
-            for (int currentRADARScanningDistanceRadius = 7;
-                     currentRADARScanningDistanceRadius < searchDistanceInPixels;
-                     currentRADARScanningDistanceRadius += 4) // no need to check at 1 pixel resolution
-            {
-                double positionBeingScannedX = Math.Round(cos * currentRADARScanningDistanceRadius);
-                double positionBeingScannedY = Math.Round(sin * currentRADARScanningDistanceRadius);
-
-                // y has to be negated because the screen is upside down. Cartesian (0,0) is bottom left, our back-buffer is Bitmap aligned (0,0) is top left.
-                // sweep is intentionally left to right.
-                Point p = new(playerShip.Position.X - (int)positionBeingScannedX, playerShip.Position.Y - (int)positionBeingScannedY);
-
-                if (p.X < 0 || p.X > 224 || p.Y < 32) break; // off screen, no need to check the radar further
-
-                Color pixel = videoScreen.GetPixel(p);
-
-                // do we see invader / saucer on that pixel?
-                if (pixel.A == 255 && pixel.G != 0) // true of invader (white) or saucer (magenta) shields (green, alpha 252).
-                {
-                    distanceToAlien = currentRADARScanningDistanceRadius;
-                    break; // we've found the closest pixel in this direction
-                }
-                else
-                {
-#if PaintRadarNONSHIELD
-                    // don't draw debug rays on top of shields. This RADAR penetrates them.
-                    if (pixel.A > 250)
-                    {
-                        // DEBUG: enable this to see the radar
-                        videoScreen.SetPixel(Color.Blue, p);
-                        radarPoints.Add(p);
-                    }
-#endif
-                }
-            }
-
-            if (distanceToAlien > 0)
-            {
-                RADAROutput[RADARAngleIndex] = 1 - (distanceToAlien / searchDistanceInPixels);
-            }
-            else
-            {
-                RADAROutput[RADARAngleIndex] = 0;
-            }
-
-            // move to next radar angle sweep
-            RADARAngleToCheckInDegrees += RADARVisionAngleInDegrees;
-        }
-
-        // --- SHIELD DETECTOR ---
-
-        samplePoints = 15;
-        RADARAngleToCheckInDegrees = -65;
-
-        RADARVisionAngleInDegrees = 2 * (-RADARAngleToCheckInDegrees) / (samplePoints - 1);
-
-        searchDistanceInPixels = 50;
-
-        for (int RADARAngleIndex = 0; RADARAngleIndex < samplePoints; RADARAngleIndex++)
-        {
-            //     -45  0  45
-            //  -90 _ \ | / _ 90   <-- relative to direction of player. 0 = right, 90 = up, so we adjust for
-            double LIDARAngleToCheckInRadians = DegreesInRadians(90 + RADARAngleToCheckInDegrees);
-
-            // calculate ONCE per angle, not per radius.
-            double cos = Math.Cos(LIDARAngleToCheckInRadians);
-            double sin = Math.Sin(LIDARAngleToCheckInRadians);
-
-            float distanceToAlien = 0;
-
-            for (int currentRADARScanningDistanceRadius = 8; // just below the bottom part of the base (8px up fron ship)
-                     currentRADARScanningDistanceRadius < searchDistanceInPixels;
-                     currentRADARScanningDistanceRadius += 4) // no need to check at 1 pixel resolution
-            {
-                double positionBeingScannedX = Math.Round(cos * currentRADARScanningDistanceRadius);
-                double positionBeingScannedY = Math.Round(sin * currentRADARScanningDistanceRadius);
-
-                // y has to be negated because the screen is upside down. Cartesian (0,0) is bottom left, our back-buffer is Bitmap aligned (0,0) is top left.
-                // sweep is intentionally left to right.
-                Point p = new(playerShip.Position.X - (int)positionBeingScannedX, playerShip.Position.Y - (int)positionBeingScannedY);
-
-                if (p.X < 0 || p.X > 224 || p.Y < 32) break; // off screen
-
-                // do we see shield at the pixel?
-                if (videoScreen.GetPixel(p).A <= 252)
-                {
-                    distanceToAlien = currentRADARScanningDistanceRadius;
-                    break; // we've found the closest pixel in this direction
-                }
-                else
-                {
-#if PaintRadarSHIELD
-                    // DEBUG: enable this to see the radar
-                    videoScreen.SetPixel(Color.Blue, p);
-
-                    //Bitmap b = videoScreen.GetVideoDisplayContent();
-                    //b.Save(@"c:\temp\shield.png");
-
-                    radarPoints.Add(p);
-#endif
-                }
-            }
-
-            if (distanceToAlien > 0)
-            {               
-                RADAROutput[45 + RADARAngleIndex] = 1 - (distanceToAlien / searchDistanceInPixels);
-            }
-            else
-            {
-                RADAROutput[45 + RADARAngleIndex] = 0;
-            }
-
-            RADARAngleToCheckInDegrees += RADARVisionAngleInDegrees;
-        }
-
-        // RADAR tells you where things are, but from a firing perspective, it's helpful to know that they are moving and in which direction
-        // given for any left->right or vice versa, speed is constant we provide it here.
-        RADAROutput[45+15] = spaceInvaderController.DirectionAndSpeedOfInvaders/3;
-
-        // an array of float values mostly 0..1 indicating "1" something is really close in that direction to "0" nothing, the last float -1..1 indicating relative speed and direction
-        return RADAROutput;
+        return Radar.Output(playerShip, spaceInvaderController.DirectionAndSpeedOfInvaders, radarPoints, currentFrame, videoScreen);
     }
 
-    /// <summary>
-    /// Logic requires radians but we track angles in degrees, this converts.
-    /// </summary>
-    /// <param name="angle"></param>
-    /// <returns></returns>
-    public static double DegreesInRadians(double angle)
-    {
-        return (double)Math.PI * angle / 180;
-    }
-
-    /// <summary>
-    /// Compare two Color objects for equality, because Color.Equals() is not implemented in a logical way.
-    /// This matches ARGB. It does not consider "Name".
-    /// </summary>
-    /// <param name="colour1"></param>
-    /// <param name="colour2"></param>
-    /// <returns></returns>
-    public static bool ColorEquals(Color colour1, Color colour2)
-    {
-        return colour1.A == colour2.A && colour1.R == colour2.R && colour1.G == colour2.G && colour1.B == colour2.B;
-    }
-#endregion
+    #endregion
 }

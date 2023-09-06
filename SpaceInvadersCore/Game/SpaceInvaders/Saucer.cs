@@ -25,11 +25,6 @@ internal class Saucer
     //      █        █       
 
     /// <summary>
-    /// Debugging.
-    /// </summary>
-    private const bool c_showHitBox = false;
-
-    /// <summary>
     /// Location of the flying saucer (horizontal).
     /// </summary>
     internal int X;
@@ -42,14 +37,14 @@ internal class Saucer
     /// <summary>
     /// Direction + speed of the flying saucer.
     /// </summary>
-    internal int XDirection = 2;
+    internal int XDirection;
 
     /// <summary>
     /// Dimensions of the flying saucer.
     /// Technically it's smaller, but this we're using the image of the saucer from the 1978 game - that has
     /// blank pixels either side to avoid having to erase it as it moves.
     /// </summary>
-    internal static Size Dimensions = new()
+    internal static readonly Size Dimensions = new()
     {
         Width = 24,
         Height = 8
@@ -144,11 +139,9 @@ internal class Saucer
          
          */
 
-#pragma warning disable CS0162 // Unreachable code detected
-        if (c_showHitBox) videoScreen.DrawRectangle(Color.Blue, HitBox());
-#pragma warning restore CS0162 // Unreachable code detected
+        if (DebugSettings.c_debugSaucerDrawHitBox) videoScreen.DrawRectangle(Color.Blue, HitBox());
 
-        videoScreen.DrawSprite(OriginalSpritesFrom1978.Sprites["SpriteSaucer"], X, Y);
+        videoScreen.DrawSprite(OriginalSpritesFrom1978.Get("SpriteSaucer"), X, Y);
     }
 
     /// <summary>
@@ -157,11 +150,9 @@ internal class Saucer
     /// <param name="g"></param>
     internal void EraseSprite()
     {
-        videoScreen.EraseSprite(OriginalSpritesFrom1978.Sprites["SpriteSaucer"], X, Y);
+        videoScreen.EraseSprite(OriginalSpritesFrom1978.Get("SpriteSaucer"), X, Y);
 
-#pragma warning disable CS0162 // Unreachable code detected
-        if (c_showHitBox) videoScreen.DrawRectangle(Color.Black, HitBox());
-#pragma warning restore CS0162 // Unreachable code detected
+        if (DebugSettings.c_debugSaucerDrawHitBox) videoScreen.DrawRectangle(Color.Black, HitBox());
     }
 
     /// <summary>

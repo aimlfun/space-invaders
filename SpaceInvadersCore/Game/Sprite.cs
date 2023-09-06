@@ -23,7 +23,9 @@ public class Sprite
     internal readonly byte[,] Pixels;
 
     /// <summary>
-    /// Instantiate sprite from the definition from the original EEPROMs.
+    /// Instantiate sprite from the definition from the original EPROMs.
+    /// The screen is technically 256x224, but Taito rotated it counter-clockwise, making it 224x256.
+    /// That means the sprite definitions have top as the left edge. We need to rotate them to match the rotated screen.
     /// </summary>
     /// <param name="height"></param>
     /// <param name="originalGameByteDefinitionExpressedInHexBytesSpaceDelimited"></param>
@@ -53,7 +55,7 @@ public class Sprite
             {
                 byte pixel = (byte)(value >> bit & 1); // returns 0 or 1, depending on the bit at position i.
 
-                Pixels[y, HeightInPX - x - 1] = pixel; // y & x are swapped to rotate it.
+                Pixels[y, HeightInPX - x - 1] = pixel; // y & x are swapped to rotate it (counter clockwise) to match the screen.
                 x++;
 
                 // when we've reached the end of the raster line, move to the next raster line.

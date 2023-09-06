@@ -8,7 +8,7 @@ namespace SpaceInvadersAI.AI
     /// <summary>
     /// A class that creates the networks using different architectures.
     /// </summary>
-    internal class Architecture
+    internal static class Architecture
     {
         //    █     ████     ███    █   █    ███    █████   █████    ███    █████   █   █   ████    █████
         //   █ █    █   █   █   █   █   █     █       █     █       █   █     █     █   █   █   █   █
@@ -71,7 +71,7 @@ namespace SpaceInvadersAI.AI
                     // attach this first layer to the inputs
                     if (layer == 0)
                     {
-                        foreach (INPUTCell bi in neuralNetwork.Inputs.Values)
+                        foreach (InputCell bi in neuralNetwork.Inputs.Values)
                         {
                             if (inputsToConnectTo.Length == 0 || inputsToConnectTo.Contains(bi.Id))
                             {
@@ -89,11 +89,12 @@ namespace SpaceInvadersAI.AI
                     }
                 }
 
+                // SonarQube moans about the line below. But at the start of the loop we add it to the dictionary, and cells is also initialised.
                 perceptrons[layer] = cells;
             }
 
             // add all the connections from the last hidden layer to the outputs
-            foreach (OUTPUTCell bo in neuralNetwork.Outputs.Values)
+            foreach (OutputCell bo in neuralNetwork.Outputs.Values)
             {
                 if (outputsToConnectTo.Length > 0 && !outputsToConnectTo.Contains(bo.Id))
                 {
@@ -139,10 +140,26 @@ namespace SpaceInvadersAI.AI
             if (outputsToConnectTo.Length == 0) outputsToConnectTo = neuralNetwork.Outputs.Keys.ToArray();
 
             // pick a random number of inputs 
-            int inputCount = inputsToConnectTo.Length == 1 ? 1 : randomiseWhichInputsAreIncluded ? RandomNumberGenerator.GetInt32(1, inputsToConnectTo.Length) : inputsToConnectTo.Length;
+            int inputCount;
+            if (randomiseWhichInputsAreIncluded)
+            {
+                inputCount = inputsToConnectTo.Length == 1 ? 1 : RandomNumberGenerator.GetInt32(1, inputsToConnectTo.Length);
+            }
+            else
+            {
+                inputCount = inputsToConnectTo.Length == 1 ? 1 : inputsToConnectTo.Length;
+            }
 
             // pick a random number of inputs
-            int outputCount = outputsToConnectTo.Length == 1 ? 1 : randomiseWhichOutputsAreIncluded ? RandomNumberGenerator.GetInt32(1, outputsToConnectTo.Length) : outputsToConnectTo.Length;
+            int outputCount;
+            if (randomiseWhichOutputsAreIncluded)
+            {
+                outputCount = outputsToConnectTo.Length == 1 ? 1 : RandomNumberGenerator.GetInt32(1, outputsToConnectTo.Length);
+            }
+            else
+            {
+                outputCount = outputsToConnectTo.Length == 1 ? 1 : outputsToConnectTo.Length;
+            }
 
             // detect if too few hidden neurons
             if (hiddenNeuronCount < 1) throw new ArgumentOutOfRangeException(nameof(hiddenNeuronCount), " must be more than 0, otherwise there is nothing to create");
@@ -169,7 +186,7 @@ namespace SpaceInvadersAI.AI
                 neuralNetwork.Mutate(MutationMethod.AddSelfConnection);
             }
 
-            BaseCell[] cells = neuralNetwork.Neurons.Values.ToArray(); // AddCELLsToRandomNetwork(neuralNetwork, hiddenNeuronCount, ref types);
+            BaseCell[] cells = neuralNetwork.Neurons.Values.ToArray();
 
             AddMINIMUMConnectionsRequiredToRandomNetwork(ref connectionCount, ref selfConnectionCount, cells);
 

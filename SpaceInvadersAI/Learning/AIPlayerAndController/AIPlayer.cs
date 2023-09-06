@@ -4,9 +4,6 @@ using SpaceInvadersAI.Learning.Configuration;
 using SpaceInvadersAI.Learning.Utilities;
 using System.Diagnostics;
 using SpaceInvadersAI.AI;
-using System.Drawing.Imaging;
-using SpaceInvadersAI.AI.Utilities;
-using System.Drawing;
 using static SpaceInvadersAI.Learning.Configuration.PersistentConfig;
 
 namespace SpaceInvadersAI.Learning.AIPlayerAndController;
@@ -79,11 +76,6 @@ internal class AIPlayer : IDisposable
     private readonly VideoDisplay videoDisplay;
 
     /// <summary>
-    /// The neural network data, either then internal structure (ref. alien + alive status etc) or the pixels on the screen.
-    /// </summary>
-    private double[] neuralNetworkInput;
-
-    /// <summary>
     /// Used to annotate screens with the brain's name / provenance.
     /// </summary>
     private readonly Font fontAnnotation = new("Courier New", 7, FontStyle.Bold);
@@ -106,11 +98,11 @@ internal class AIPlayer : IDisposable
     /// </summary>
     /// <param name="brain"></param>
     /// <param name="id"></param>
-    internal AIPlayer(Brain brain, int id)
-    {        
+    internal AIPlayer(Brain brain, int id, bool showFrameCounter = false)
+    {
         videoDisplay = new VideoDisplay();
 
-        gameController = new(videoDisplay, brain.HighScore, PersistentConfig.Settings.AIPlaysWithShields, PersistentConfig.Settings.AIOneLevelOnly, PersistentConfig.Settings.AIStartLevel, PersistentConfig.Settings.EndGameIfLifeLost);
+        gameController = new(videoDisplay, brain.HighScore, Settings.AIPlaysWithShields, Settings.AIOneLevelOnly, Settings.AIStartLevel, Settings.EndGameIfLifeLost, showFrameCounter);
 
         uniquePlayerIdentifier = id;
 
@@ -121,12 +113,12 @@ internal class AIPlayer : IDisposable
         if (PersistentConfig.Settings.InputToAI != AIInputMode.videoScreen)
         {
             // we write these to the screen once for performance reasons. Just to show off, we do so using our video display code not onto a Bitmap.
-            videoDisplay.DrawString(brain.Provenance.ToUpper().Replace("/", "-"), new Point(216 - 8 - brain.Provenance.Length * 8, 24)); // alphanumeric sprites are 8px wide
+            videoDisplay.DrawString(brain.Provenance.ToUpper().Replace("/", "-"), new Point(216 - 8 - brain.Provenance.Length * 8, OriginalDataFrom1978.s_scorePlayer2Rectangle.Y)); // alphanumeric sprites are 8px wide
 
             // remove CREDIT 00 using fill, and replace with brain's name.
-            videoDisplay.FillRectangle(Color.Black, new Rectangle(136, 244, 87, 11));
-            videoDisplay.DrawString(brain.Name, new Point(216 - brain.Name.Length * 8, 244)); // alphanumeric sprites are 8px wide
-        };
+            videoDisplay.FillRectangle(Color.Black, new Rectangle(136, OriginalDataFrom1978.s_credit_00_position.Y, 87, 11));
+            videoDisplay.DrawString(brain.Name, new Point(216 - brain.Name.Length * 8, OriginalDataFrom1978.s_credit_00_position.Y)); // alphanumeric sprites are 8px wide
+        }
     }
 
     /// <summary>
@@ -134,36 +126,41 @@ internal class AIPlayer : IDisposable
     /// </summary>
     internal void Move()
     {
+        // no movement if dead...
         if (gameController.IsGameOver) return;
 
-        // 3 types of input supported 
-        neuralNetworkInput = PersistentConfig.Settings.InputToAI switch
+        // don't need to call neural network until the game is ready
+        if (gameController.PlayerIsReady)
         {
-            AIInputMode.videoScreen => gameController.AIGetShrunkScreen(),// (shrunk to 56x64)
-            AIInputMode.internalData => gameController.AIGetObjectArray(),
-            AIInputMode.radar => gameController.AIGetRadarArray(),
-            _ => throw new NotImplementedException(),
-        };
+            // The neural network data, either then internal structure (ref. alien + alive status etc) or the pixels on the screen.
+            double[] neuralNetworkInput = PersistentConfig.Settings.InputToAI switch
+            {
+                AIInputMode.videoScreen => gameController.AIGetShrunkScreen(),// (shrunk to 56x64)
+                AIInputMode.internalData => gameController.AIGetObjectArray(),
+                AIInputMode.radar => gameController.AIGetRadarArray(),
+                _ => throw new NotImplementedException(),
+            };
 
-        brainControllingPlayerShip.SetInputValues(neuralNetworkInput);
+            brainControllingPlayerShip.SetInputValues(neuralNetworkInput);
 
-        // ask the neural to use the input and decide what to do with the car
-        Dictionary<string, double> outputFromNeuralNetwork = brainControllingPlayerShip.FeedForward(); // process inputs
+            // ask the neural to use the input and decide what to do with the car
+            Dictionary<string, double> outputFromNeuralNetwork = brainControllingPlayerShip.FeedForward(); // process inputs
 
-        if (brainControllingPlayerShip.IsDead)
-        {
-            gameController.AbortGame();
-            return;
-        }
+            if (brainControllingPlayerShip.IsDead)
+            {
+                gameController.AbortGame();
+                return;
+            }
 
-        // two approaches to moving the player...
-        if (!PersistentConfig.Settings.UseActionFireApproach)
-        {
-            AIChoosesXPositionOfPlayerAndWhetherToFire(outputFromNeuralNetwork);
-        }
-        else
-        {
-            AIChoosesActionToControlPlayer(outputFromNeuralNetwork);
+            // two approaches to moving the player...
+            if (!PersistentConfig.Settings.UseActionFireApproach)
+            {
+                AIChoosesXPositionOfPlayerAndWhetherToFire(outputFromNeuralNetwork);
+            }
+            else
+            {
+                AIChoosesActionToControlPlayer(outputFromNeuralNetwork);
+            }
         }
 
         gameController.Play();
@@ -254,7 +251,9 @@ internal class AIPlayer : IDisposable
             // if you wish to see the regions we emulate the coloured films, then enable this.
             if (c_debugShowColourFilm)
             {
+#pragma warning disable CS0162 // Unreachable code detected
                 DrawFilmThatChangesWhitePixelsToGreenOrMagenta(latestVideoDisplayContent);
+#pragma warning restore CS0162 // Unreachable code detected
             }
 
             // when it's game over, we darken the screen a little, so you can distinguish between whether game is over or not.
@@ -271,14 +270,14 @@ internal class AIPlayer : IDisposable
     }
 
     /// <summary>
-    /// Darkening the display makes it obvious during training which ones are finished with.
+    /// Darkening the display makes it obvious during training which ones are finished with during a training session.
     /// </summary>
     /// <param name="latestVideoDisplayContent"></param>
     private static void DarkenTheDisplayAsItIsGameOver(Bitmap latestVideoDisplayContent)
     {
         using Graphics graphics = Graphics.FromImage(latestVideoDisplayContent);
         using SolidBrush darken = new(Color.FromArgb(150, 20, 20, 20)); // transparent dark grey
-        
+
         graphics.FillRectangle(darken, 0, 0, 224, 256);
         graphics.Flush();
     }
@@ -290,12 +289,12 @@ internal class AIPlayer : IDisposable
     /// <param name="latestVideoDisplayContent"></param>
     private static void DrawFilmThatChangesWhitePixelsToGreenOrMagenta(Bitmap latestVideoDisplayContent)
     {
-#pragma warning disable CS0162 // Unreachable code detected  <<<-- is reachable if you enable the debug option
         using Graphics graphics = Graphics.FromImage(latestVideoDisplayContent);
-        Bitmap overlay = VideoDisplay.BitMapTransparentRedGreen();
+
+        Bitmap overlay = VideoDisplay.BitMapTransparentRedGreen(); // get the coloured overlay
         graphics.DrawImageUnscaled(overlay, 0, 0);
+
         graphics.Flush();
-#pragma warning restore CS0162 // Unreachable code detected
     }
 
     /// <summary>
@@ -324,10 +323,10 @@ internal class AIPlayer : IDisposable
         // we write these to the screen once for performance reasons. Just to show off, we do so using our video display code not onto a Bitmap.
 
         DrawStringRightAlignedTo(brainControllingPlayerShip.Provenance, fontAnnotation, Brushes.White, 224 - 16, 23, graphics);
-        
+
         // remove the CREDIT 00 or the previous label
-        graphics.FillRectangle(Brushes.Black, 130, 244, 93, 11);
-        DrawStringRightAlignedTo(brainControllingPlayerShip.lineage, fontAnnotation, Brushes.White, 224 - 8, 244, graphics);
+        graphics.FillRectangle(Brushes.Black, 130, 240, 93, 11);
+        DrawStringRightAlignedTo(brainControllingPlayerShip.lineage, fontAnnotation, Brushes.White, 224 - 8, 240, graphics);
     }
 
     /// <summary>

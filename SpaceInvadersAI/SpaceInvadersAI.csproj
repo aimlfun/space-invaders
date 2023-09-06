@@ -15,15 +15,35 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Templates\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="invaders-config.json">
+    <None Update="Config\ai-config.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Config\fitness-scoring.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="space-invaders-fitness-scoring.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <None Update="Templates\internalData action lvl=1 s=1140 ik=55 sk=1.ai">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Templates\internalData action lvl=10 s=10580 ik=55 sk=0.ai">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Templates\internalData action lvl=11 s=11570 ik=55 sk=0.ai">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Templates\internalData action lvl=2 s=2130 ik=55 sk=0.ai">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Templates\internalData action lvl=3 s=3220 ik=55 sk=1.ai">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Templates\internalData action lvl=4 s=4460 ik=55 sk=2.ai">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Templates\internalData action lvl=5 s=5550 ik=55 sk=1.ai">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Templates\internalData action lvl=7 s=7630 ik=55 sk=0.ai">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="Templates\radar position s=1090 lvl=1 ik=55 sk=1.tem">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
