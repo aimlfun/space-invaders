@@ -43,7 +43,7 @@ namespace SpaceInvaders
             // every 8ms, the game will be updated and drawn.
             gamePlayAnimationTimer = new Timer
             {
-                Interval = 8 // ms
+                Interval = (int) OriginalDataFrom1978.c_timerFrequency // ms
             };
 
             gamePlayAnimationTimer.Tick += PlayGameFrameByFrame;
@@ -83,9 +83,10 @@ namespace SpaceInvaders
             {
                 Debug.WriteLine("GAME OVER");
                 gamePlayAnimationTimer.Stop();
-                return;
             }
         }
+
+        bool fireBounce = false;
 
         /// <summary>
         /// Handle keyboard controls.
@@ -108,7 +109,11 @@ namespace SpaceInvaders
                     break;
 
                 case Keys.Space:
+                    if (fireBounce) break; // force them to let go of space bar before firing again
+
                     gameController.RequestPlayerShipFiresBullet();
+                    
+                    fireBounce = true;
                     break;
 
                 // pause <> un-pause the game
@@ -150,6 +155,11 @@ namespace SpaceInvaders
 
                 case Keys.Right:
                     gameController.CancelMove();
+                    break;
+
+                // on the original, fire could not be held down. You had to press and release it each time.
+                case Keys.Space:
+                    fireBounce = false;
                     break;
             }
         }
